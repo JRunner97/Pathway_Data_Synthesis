@@ -22,9 +22,12 @@ def radial_profile(data, center):
     radialprofile = tbin / nr
     return radialprofile 
 
+
+# TODO:: add check to see if all pixels are the same, then don't even have to run the rest
 def check_slice(template_im,slice_shape,x,y):
 
     template_slice = template_im[y_target:y_target+slice_shape[0],x_target:x_target+slice_shape[1],:]
+
     grey_slice = cv2.cvtColor(template_slice, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(grey_slice)
     fshift = np.fft.fftshift(f)
@@ -46,7 +49,7 @@ def check_slice(template_im,slice_shape,x,y):
 
 
 
-
+# get image and json filepaths
 directory = "test_subset"
 images = []
 json_files = []
@@ -161,8 +164,10 @@ for img in relation_slices:
     invert_mask = np.invert(mask)
     new_img = cv2.bitwise_or(img, invert_mask)
 
+
     masks.append(mask)
     processed_slices.append(new_img)
+
     
 # loop through all templates
 directory = "templates"
