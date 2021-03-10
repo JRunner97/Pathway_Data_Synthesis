@@ -51,7 +51,7 @@ def check_slice(template_im,slice_shape,x,y):
 
 
 # get image and json filepaths
-directory = "test_subset2"
+directory = "processed_hardcases"
 images = []
 json_files = []
 for filename in os.listdir(directory):
@@ -138,65 +138,92 @@ for current_imagepath, json_file in zip(images,json_files):
     for relation in tmp_relations:
 
         tmp_str = relation['label'].split("|")
+        source_elements = tmp_str[0].split(":")[-1]
+        if "[" in source_elements:
+            tmp_str2 = source_elements[1:-1]
+            source_elements = tmp_str2.split(",")
+        else:
+            source_elements = [source_elements]
 
-        print(relation['label'])
-        element1 = tmp_str[0].split(":")[-1]
-        element2 = tmp_str[-1]
+        target_elements = tmp_str[-1]
+        if "[" in target_elements:
+            tmp_str2 = target_elements[1:-1]
+            target_elements = tmp_str2.split(",")
+        else:
+            target_elements = [target_elements]
 
-        print(element1)
-        print(element2)
-
-        # get relation's elements
-        element1_json = None
-        element2_json = None
+        # get all relation's elements
+        elements_to_save = []
         for element in tmp_elements:
             compare_str = element['label'].split(":")[0]
-            if compare_str == element1:
-                element1_json = element
-            elif compare_str == element2:
-                element2_json = element
-
-        print(element1_json)
-        print(element2_json)
+            if compare_str in source_elements:
+                elements_to_save.append(copy.deepcopy(element))
+            elif compare_str in target_elements:
+                
+                elements_to_save.append(copy.deepcopy(element))
 
         # get relation's indicator
         indicator_json = None
         for indicator in tmp_indicators:
             temp_str = indicator['label'].split("|")
-            ind_el1 = temp_str[0].split(":")[-1]
-            ind_el2 = tmp_str[-1]
+            indicator_source_el = temp_str[0].split(":")[-1]
+            if "[" in indicator_source_el:
+                tmp_str2 = indicator_source_el[1:-1]
+                indicator_source_el = tmp_str2.split(",")
+            else:
+                indicator_source_el = [indicator_source_el]
 
-            if ind_el1 == element1 and ind_el2 == element2:
+
+            indicator_target_el = temp_str[-1]
+            if "[" in indicator_target_el:
+                tmp_str2 = indicator_target_el[1:-1]
+                indicator_target_el = tmp_str2.split(",")
+            else:
+                indicator_target_el = [indicator_target_el]
+
+            
+            if indicator_source_el == source_elements and indicator_target_el == target_elements:
                 indicator_json = indicator
+                break
 
-        print(indicator_json)
+        
         
         # TODO:: may need to rethink this part for the rotated bounding box
+        # adjust bbox for being relative ot the relation's bbox coords
         rel_pts = np.array(relation['points'])
-        el1_pts = np.array(element1_json['points'])
-        el2_pts = np.array(element2_json['points'])
         ind_pts = np.array(indicator_json['points'])
         min_x = min(rel_pts[:,0])
         min_y = min(rel_pts[:,1])
 
         rel_pts[:,0] -= min_x
         rel_pts[:,1] -= min_y
-        el1_pts[:,0] -= min_x
-        el1_pts[:,1] -= min_y
-        el2_pts[:,0] -= min_x
-        el2_pts[:,1] -= min_y
         ind_pts[:,0] -= min_x
         ind_pts[:,1] -= min_y
 
+        adjusted_els = []
+        for element in elements_to_save:
+            el_pts = np.array(element['points'])
+            el_pts[:,0] -= min_x
+            el_pts[:,1] -= min_y
+            element['points'] = el_pts.tolist()
+            adjusted_els.append(element)
 
         relation['points'] = rel_pts.tolist()
-        element1_json['points'] = el1_pts.tolist()
-        element2_json['points'] = el2_pts.tolist()
         indicator_json['points'] = ind_pts.tolist()
 
         relations.append(relation)
-        relation_elements.append([element1_json,element2_json])
+        relation_elements.append(adjusted_els)
         relation_indicators.append(indicator_json)
+
+# print('ah')
+# print(relations[0]['label'])
+# print('elements')
+# for ele in relation_elements[0]:
+#     print(ele['label'])
+# print('indicator')
+# print(relation_indicators[0]['label'])
+
+
 
 # TODO:: revisit process this process and placing in image
 # remove backgrounds and artifacts from relation slices
@@ -239,6 +266,7 @@ for template_idx,filename in enumerate(os.listdir(directory)):
         template_im = cv2.imread(os.path.join(directory, filename))
 
 
+        # TODO:: change this from selecting slices in order to select a random slice
         # put relations on template and generate annotation
         element_indx = 0
         shapes = []
@@ -246,11 +274,11 @@ for template_idx,filename in enumerate(os.listdir(directory)):
 
             current_mask = masks[count]
             relation = relations[count]
-            element1_json,element2_json = relation_elements[count]
+            els_json = relation_elements[count]
             indicator_json = relation_indicators[count]
 
             # check if queried coords are a valid location
-            for idx in range(10):
+            for idx in range(500):
 
                 # subtracted max bounds to ensure valid coords
                 slice_shape = current_slice.shape
@@ -269,59 +297,94 @@ for template_idx,filename in enumerate(os.listdir(directory)):
 
                     # reindex labels and adjust bboxes
                     current_relation = copy.deepcopy(relation)
-                    current_element1_json = copy.deepcopy(element1_json)
-                    current_element2_json = copy.deepcopy(element2_json)
+                    current_els = copy.deepcopy(els_json)
                     current_indicator_json = copy.deepcopy(indicator_json)
 
-                    # reindex element 1 label and id
-                    split1 = current_element1_json['label'].split(":")
-                    split1[0] = str(element_indx)
-                    current_element1_json['id'] = element_indx
-                    current_element1_json['label'] = ":".join(split1)
-                    element_indx += 1
+                    # reindex elements
+                    reindexed_els = []
+                    for el_json in current_els:
 
-                    # reindex element 2 label and id
-                    split2 = current_element2_json['label'].split(":")
-                    split2[0] = str(element_indx)
-                    current_element2_json['id'] = element_indx
-                    current_element2_json['label'] = ":".join(split2)
-                    element_indx += 1
+                        split1 = el_json['label'].split(":")
+                        split1[0] = str(element_indx)
+                        el_json['id'] = element_indx
+                        el_json['label'] = ":".join(split1)
+                        element_indx += 1
+                        reindexed_els.append(el_json)
 
-                    # reindex relation label
+
+                    # reindex relation and replace reindex elements
+                    # get num of source and tar elements
+                    tmp_str = current_relation['label'].split("|")
+                    source_elements = tmp_str[0].split(":")[-1]
+                    if "[" in source_elements:
+                        tmp_str2 = source_elements[1:-1]
+                        source_elements = tmp_str2.split(",")
+                    else:
+                        source_elements = [source_elements]
+
+                    target_elements = tmp_str[-1]
+                    if "[" in target_elements:
+                        tmp_str2 = target_elements[1:-1]
+                        target_elements = tmp_str2.split(",")
+                    else:
+                        target_elements = [target_elements]
+
+                    # use num of source and tar elements as indices to reindexed_source_ids
+                    reindexed_source_ids = []
+                    for idx in range(len(source_elements)):
+                        reindexed_source_ids.append(str(reindexed_els[idx]['id']))
+                    
+                    reindexed_tar_ids = []
+                    for idx in range(len(target_elements)):
+                        idx += len(source_elements)
+                        reindexed_tar_ids.append(str(reindexed_els[idx]['id']))
+
+                    # turn lists into strings
+                    source_str = ",".join(reindexed_source_ids)
+                    target_str = ",".join(reindexed_tar_ids)
+                    if len(reindexed_source_ids) > 1:
+                        source_str = "[" + source_str + "]"
+                    if len(reindexed_tar_ids) > 1:
+                        target_str = "[" + target_str + "]"
+
+                    # set relation label to new reindexed values
                     split3 = current_relation['label'].split("|")
                     activation_type = split3[0].split(":")[1]
-                    current_relation['label'] = str(element_indx) + ":" + activation_type + ":" + str(current_element1_json['id']) + "|" + str(current_element2_json['id'])
+                    current_relation['label'] = str(element_indx) + ":" + activation_type + ":" + source_str + "|" + target_str
                     element_indx += 1
 
                     # reindex indicator
                     split3 = current_indicator_json['label'].split("|")
                     activation_type = split3[0].split(":")[1]
-                    current_indicator_json['label'] = str(element_indx) + ":" + activation_type + ":" + str(current_element1_json['id']) + "|" + str(current_element2_json['id'])
+                    current_indicator_json['label'] = str(element_indx) + ":" + activation_type + ":" + source_str + "|" + target_str
                     element_indx += 1
+
 
                     # correct bbox values for slice
                     rel_pts = np.array(current_relation['points'])
-                    el1_pts = np.array(current_element1_json['points'])
-                    el2_pts = np.array(current_element2_json['points'])
                     ind_pts = np.array(current_indicator_json['points'])
 
                     rel_pts[:,0] += x_target
                     rel_pts[:,1] += y_target
-                    el1_pts[:,0] += x_target
-                    el1_pts[:,1] += y_target
-                    el2_pts[:,0] += x_target
-                    el2_pts[:,1] += y_target
                     ind_pts[:,0] += x_target
                     ind_pts[:,1] += y_target
 
+                    output_els = []
+                    for element in reindexed_els:
+                        tmp_pts = np.array(element['points'])
+                        tmp_pts[:,0] += x_target
+                        tmp_pts[:,1] += y_target
+                        element['points'] = tmp_pts.tolist()
+                        output_els.append(element)
+
+
                     current_relation['points'] = rel_pts.tolist()
-                    current_element1_json['points'] = el1_pts.tolist()
-                    current_element2_json['points'] = el2_pts.tolist()
                     current_indicator_json['points'] = ind_pts.tolist()
 
+                    for element in output_els:
+                        shapes.append(element)
+
                     shapes.append(current_relation)
-                    shapes.append(current_element1_json)
-                    shapes.append(current_element2_json)
                     shapes.append(current_indicator_json)
 
         # save json and new image
