@@ -210,12 +210,17 @@ for current_imagepath, json_file in zip(images,json_files):
         #     if indicator != indicator_json:
         #         if np.all(ind_pts[:,0] > min_x) and np.all(ind_pts[:,1] > min_y) and np.all(ind_pts[:,0] < max_x) and np.all(ind_pts[:,1] < max_y):
         #             extra_indicators_to_save.append(copy.deepcopy(indicator))
-        
-        # get relation slice
-        relation_slices.append(current_image[min_y:max_y,min_x:max_x,:])
 
+        # get relation slice
+        tmp_slice = current_image[min_y:max_y,min_x:max_x,:]
+        tmp_slice_shape = tmp_slice.shape
+        # cv2.imshow('dst_rt', tmp_slice)
+        # cv2.waitKey(0)
+        
 
         # adjust bbox for being relative ot the relation's bbox coords
+        mask = np.empty(current_image[min_y:max_y,min_x:max_x,:].shape)
+        mask[:] = np.nan
         rel_pts = np.clip(np.array(relation['points']),0,np.inf)
         ind_pts = np.array(indicator_json['points'])
         min_x = min(rel_pts[:,0])
@@ -223,17 +228,16 @@ for current_imagepath, json_file in zip(images,json_files):
 
         rel_pts[:,0] -= min_x
         rel_pts[:,1] -= min_y
+
         ind_pts[:,0] -= min_x
         ind_pts[:,1] -= min_y
+        ind_min_x = np.clip(int(min(ind_pts[:,0])),0,tmp_slice_shape[1])
+        ind_min_y = np.clip(int(min(ind_pts[:,1])),0,tmp_slice_shape[0])
+        ind_max_x = np.clip(int(max(ind_pts[:,0])),0,tmp_slice_shape[1])
+        ind_max_y = np.clip(int(max(ind_pts[:,1])),0,tmp_slice_shape[0])
+        mask[ind_min_y:ind_max_y,ind_min_x:ind_max_x,:] = 1
 
-        # # adjust additional indicators found
-        # adjusted_extra_ind = []
-        # for indicator in extra_indicators_to_save:
-        #     ind_pts = np.array(indicator['points'])
-        #     ind_pts[:,0] -= min_x
-        #     ind_pts[:,1] -= min_y
-        #     indicator['points'] = ind_pts.tolist()
-        #     adjusted_extra_ind.append(indicator)
+
 
         # adjust relationship elements
         adjusted_els = []
@@ -241,27 +245,30 @@ for current_imagepath, json_file in zip(images,json_files):
             el_pts = np.array(element['points'])
             el_pts[:,0] -= min_x
             el_pts[:,1] -= min_y
+            el_min_x = np.clip(int(min(el_pts[:,0])),0,tmp_slice_shape[1])
+            el_min_y = np.clip(int(min(el_pts[:,1])),0,tmp_slice_shape[0])
+            el_max_x = np.clip(int(max(el_pts[:,0])),0,tmp_slice_shape[1])
+            el_max_y = np.clip(int(max(el_pts[:,1])),0,tmp_slice_shape[0])
+            mask[el_min_y:el_max_y,el_min_x:el_max_x,:] = 1
             element['points'] = el_pts.tolist()
             adjusted_els.append(element)
 
-        # # adjust additional elements found
-        # adjusted_extra_els = []
-        # for element in extra_elements_to_save:
-        #     el_pts = np.array(element['points'])
-        #     el_pts[:,0] -= min_x
-        #     el_pts[:,1] -= min_y
-        #     element['points'] = el_pts.tolist()
-        #     adjusted_extra_els.append(element)
+        # keep pixels inside of target regions, set other pixels to white
+        tmp_slice = (tmp_slice * mask)
+        tmp_slice = np.nan_to_num(tmp_slice,nan=255)
 
+        # tmp_slice = tmp_slice / 255
+        # cv2.imshow('dst_rt', tmp_slice)
+        # cv2.waitKey(0)
 
+        relation_slices.append(tmp_slice)
         relation['points'] = rel_pts.tolist()
         indicator_json['points'] = ind_pts.tolist()
 
         relations.append(relation)
         relation_elements.append(adjusted_els)
         relation_indicators.append(indicator_json)
-        # extra_indicators.append(adjusted_extra_ind)
-        # extra_elements.append(adjusted_extra_els)
+
 
 # print('ah')
 # print(relations[0]['label'])
