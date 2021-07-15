@@ -1,0 +1,362 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          263.0,
+          132.0
+        ],
+        [
+          263.0,
+          153.0
+        ],
+        [
+          305.0,
+          153.0
+        ],
+        [
+          305.0,
+          132.0
+        ]
+      ],
+      "label": "16:gene:DISC"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          248.0,
+          251.0
+        ],
+        [
+          248.0,
+          274.0
+        ],
+        [
+          316.0,
+          274.0
+        ],
+        [
+          316.0,
+          251.0
+        ]
+      ],
+      "label": "38:gene:"
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          246.02023315429688,
+          277.1720886230469
+        ],
+        [
+          247.55691528320312,
+          130.30075073242188
+        ],
+        [
+          315.9331359863281,
+          129.12185668945312
+        ],
+        [
+          314.3964538574219,
+          275.9931945800781
+        ]
+      ],
+      "label": "54:inhibit_relation:16|38"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          252.0,
+          163.0
+        ],
+        [
+          252.0,
+          215.0
+        ],
+        [
+          276.0,
+          215.0
+        ],
+        [
+          276.0,
+          163.0
+        ]
+      ],
+      "label": "6:inhibit:16|38"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          503.0,
+          295.0
+        ],
+        [
+          503.0,
+          317.0
+        ],
+        [
+          570.0,
+          317.0
+        ],
+        [
+          570.0,
+          295.0
+        ]
+      ],
+      "label": "19:gene:ro-Casj"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          431.0,
+          335.0
+        ],
+        [
+          431.0,
+          358.0
+        ],
+        [
+          509.0,
+          358.0
+        ],
+        [
+          509.0,
+          335.0
+        ]
+      ],
+      "label": "49:gene:"
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          429.0,
+          366.0
+        ],
+        [
+          433.0,
+          293.0
+        ],
+        [
+          572.0,
+          293.0
+        ],
+        [
+          568.0,
+          366.0
+        ]
+      ],
+      "label": "57:activate_relation:19|49"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          510.0,
+          309.0
+        ],
+        [
+          510.0,
+          364.0
+        ],
+        [
+          593.0,
+          364.0
+        ],
+        [
+          593.0,
+          309.0
+        ]
+      ],
+      "label": "10:activate:19|49"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          11.0,
+          308.0
+        ],
+        [
+          11.0,
+          331.0
+        ],
+        [
+          101.0,
+          331.0
+        ],
+        [
+          101.0,
+          308.0
+        ]
+      ],
+      "label": "18:gene:i.0 oSytochrome C"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          112.0,
+          286.0
+        ],
+        [
+          112.0,
+          304.0
+        ],
+        [
+          182.0,
+          304.0
+        ],
+        [
+          182.0,
+          286.0
+        ]
+      ],
+      "label": "34:gene:"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          39.0,
+          341.0
+        ],
+        [
+          39.0,
+          365.0
+        ],
+        [
+          112.0,
+          365.0
+        ],
+        [
+          112.0,
+          341.0
+        ]
+      ],
+      "label": "35:gene:"
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          17.06885528564453,
+          391.15740966796875
+        ],
+        [
+          8.000007629394531,
+          305.0
+        ],
+        [
+          182.00003051757812,
+          267.0
+        ],
+        [
+          191.06887817382812,
+          353.15740966796875
+        ]
+      ],
+      "label": "56:inhibit_relation:[34,18]|35"
+    },
+    {
+      "line_color": null,
+      "flags": {},
+      "fill_color": null,
+      "shape_type": "polygon",
+      "points": [
+        [
+          118.0,
+          301.0
+        ],
+        [
+          118.0,
+          359.0
+        ],
+        [
+          202.0,
+          359.0
+        ],
+        [
+          202.0,
+          301.0
+        ]
+      ],
+      "label": "9:inhibit:[34,18]|35"
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_2906469_bin_1476-4598-9-144-3.jpg",
+  "imageData": null,
+  "imageHeight": 510,
+  "imageWidth": 600
+}

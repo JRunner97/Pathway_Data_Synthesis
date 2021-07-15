@@ -1,0 +1,431 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        315.5,
+        280.5,
+        53.0,
+        67.0,
+        -90.0
+      ],
+      "label": "13:gene:ulglugcuu.factor:- .nh ",
+      "points": [
+        [
+          282.0,
+          254.0
+        ],
+        [
+          282.0,
+          307.0
+        ],
+        [
+          349.0,
+          307.0
+        ],
+        [
+          349.0,
+          254.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 13
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        319.5,
+        394.5,
+        25.0,
+        77.0,
+        -90.0
+      ],
+      "label": "18:gene:Angiogenesis",
+      "points": [
+        [
+          281.0,
+          382.0
+        ],
+        [
+          281.0,
+          407.0
+        ],
+        [
+          358.0,
+          407.0
+        ],
+        [
+          358.0,
+          382.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 18
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        319.5000305175781,
+        330.5000305175781,
+        162.01675415039062,
+        76.94522857666016,
+        -87.83892822265625
+      ],
+      "component": [
+        13,
+        18,
+        4
+      ],
+      "label": "35:activate_relation:13|18",
+      "points": [
+        [
+          278.0,
+          410.0
+        ],
+        [
+          284.0,
+          251.0
+        ],
+        [
+          361.0,
+          251.0
+        ],
+        [
+          355.0,
+          410.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        300.5,
+        343.0,
+        24.0,
+        19.0,
+        -90.0
+      ],
+      "label": "4:activate:13|18",
+      "points": [
+        [
+          297.0,
+          324.0
+        ],
+        [
+          297.0,
+          353.0
+        ],
+        [
+          315.0,
+          353.0
+        ],
+        [
+          315.0,
+          324.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 4
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        110.44705200195312,
+        321.01177978515625,
+        33.98823165893555,
+        76.02630615234375,
+        -88.49256896972656
+      ],
+      "label": "16:gene:Chemokine:IL-8",
+      "points": [
+        [
+          72.0,
+          305.0
+        ],
+        [
+          72.0,
+          339.0
+        ],
+        [
+          148.0,
+          339.0
+        ],
+        [
+          148.0,
+          305.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 16
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        214.64996337890625,
+        356.0500183105469,
+        54.707420349121094,
+        304.2111511230469,
+        -71.56504821777344
+      ],
+      "component": [
+        16,
+        18,
+        26
+      ],
+      "label": "39:activate_relation:16|18",
+      "points": [
+        [
+          350.3000183105469,
+          430.1000061035156
+        ],
+        [
+          61.699989318847656,
+          333.8999938964844
+        ],
+        [
+          78.99996948242188,
+          281.9999694824219
+        ],
+        [
+          367.6000061035156,
+          378.1999816894531
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        248.0,
+        357.5,
+        19.0,
+        14.0,
+        -90.0
+      ],
+      "label": "26:activate:16|18",
+      "points": [
+        [
+          212.0,
+          337.0
+        ],
+        [
+          212.0,
+          367.0
+        ],
+        [
+          255.0,
+          367.0
+        ],
+        [
+          255.0,
+          337.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 26
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        114.5,
+        389.0,
+        30.0,
+        129.0,
+        -90.0
+      ],
+      "label": "17:gene:Inflammatory enzyCOX-2",
+      "points": [
+        [
+          50.0,
+          374.0
+        ],
+        [
+          50.0,
+          404.0
+        ],
+        [
+          179.0,
+          404.0
+        ],
+        [
+          179.0,
+          374.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 17
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        119.5,
+        515.5,
+        57.0,
+        93.0,
+        -90.0
+      ],
+      "label": "20:gene:vavwwmars amgs",
+      "points": [
+        [
+          73.0,
+          487.0
+        ],
+        [
+          73.0,
+          544.0
+        ],
+        [
+          166.0,
+          544.0
+        ],
+        [
+          166.0,
+          487.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 20
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        114.5,
+        459.0,
+        125.0,
+        174.0,
+        -0.0
+      ],
+      "component": [
+        17,
+        20,
+        5
+      ],
+      "label": "36:activate_relation:17|20",
+      "points": [
+        [
+          177.0,
+          546.0
+        ],
+        [
+          52.0,
+          542.0
+        ],
+        [
+          52.0,
+          372.0
+        ],
+        [
+          177.0,
+          376.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        100.0,
+        468.5,
+        17.0,
+        14.0,
+        -90.0
+      ],
+      "label": "5:activate:17|20",
+      "points": [
+        [
+          93.0,
+          436.0
+        ],
+        [
+          93.0,
+          477.0
+        ],
+        [
+          106.0,
+          477.0
+        ],
+        [
+          106.0,
+          436.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 5
+      }
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_5568615_bin_MI2017-5126048.001.jpg",
+  "imageData": null,
+  "imageHeight": 570,
+  "imageWidth": 726
+}

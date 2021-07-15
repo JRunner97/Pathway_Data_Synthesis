@@ -1,0 +1,442 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 7,
+      "rotated_box": [
+        206.0,
+        213.0,
+        24.0,
+        42.0,
+        -90.0
+      ],
+      "label": "7:gene:SRC",
+      "points": [
+        [
+          185.0,
+          201.0
+        ],
+        [
+          185.0,
+          225.0
+        ],
+        [
+          227.0,
+          225.0
+        ],
+        [
+          227.0,
+          201.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 18,
+      "rotated_box": [
+        136.50001525878906,
+        302.0,
+        23.83209228515625,
+        57.93989181518555,
+        -87.83892822265625
+      ],
+      "label": "18:gene:",
+      "points": [
+        [
+          108.0,
+          289.0
+        ],
+        [
+          108.0,
+          315.0
+        ],
+        [
+          165.0,
+          315.0
+        ],
+        [
+          165.0,
+          289.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        171.78863525390625,
+        260.7429504394531,
+        163.027587890625,
+        60.204524993896484,
+        -48.9793815612793
+      ],
+      "label": "31:activate_relation:7|18",
+      "points": [
+        [
+          141.0,
+          342.0
+        ],
+        [
+          96.0,
+          302.0
+        ],
+        [
+          203.0,
+          180.0
+        ],
+        [
+          248.0,
+          219.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 1,
+      "rotated_box": [
+        152.0,
+        269.0,
+        22.0,
+        20.0,
+        -90.0
+      ],
+      "label": "1:activate:7|18",
+      "points": [
+        [
+          137.0,
+          230.0
+        ],
+        [
+          137.0,
+          282.0
+        ],
+        [
+          192.0,
+          282.0
+        ],
+        [
+          192.0,
+          230.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 6,
+      "rotated_box": [
+        535.0,
+        214.0,
+        26.0,
+        42.0,
+        -90.0
+      ],
+      "label": "6:gene:SRC",
+      "points": [
+        [
+          514.0,
+          201.0
+        ],
+        [
+          514.0,
+          227.0
+        ],
+        [
+          556.0,
+          227.0
+        ],
+        [
+          556.0,
+          201.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 16,
+      "rotated_box": [
+        606.3146362304688,
+        304.3783264160156,
+        54.98493576049805,
+        35.22782897949219,
+        -6.519801616668701
+      ],
+      "label": "16:gene:",
+      "points": [
+        [
+          577.0,
+          287.0
+        ],
+        [
+          577.0,
+          325.0
+        ],
+        [
+          632.0,
+          325.0
+        ],
+        [
+          632.0,
+          287.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        574.4999389648438,
+        258.5,
+        65.44960021972656,
+        166.46424865722656,
+        -33.401668548583984
+      ],
+      "label": "39:activate_relation:6|16",
+      "points": [
+        [
+          593.0,
+          346.0
+        ],
+        [
+          502.0,
+          208.0
+        ],
+        [
+          556.0,
+          171.0
+        ],
+        [
+          647.0,
+          309.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 28,
+      "rotated_box": [
+        594.36767578125,
+        272.2205505371094,
+        21.60881996154785,
+        25.210290908813477,
+        -59.03623962402344
+      ],
+      "label": "28:activate:6|16",
+      "points": [
+        [
+          556.0,
+          227.0
+        ],
+        [
+          556.0,
+          279.0
+        ],
+        [
+          615.0,
+          279.0
+        ],
+        [
+          615.0,
+          227.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 4,
+      "rotated_box": [
+        154.5,
+        42.5,
+        27.0,
+        75.0,
+        -90.0
+      ],
+      "label": "4:gene:RANKL",
+      "points": [
+        [
+          117.0,
+          29.0
+        ],
+        [
+          117.0,
+          56.0
+        ],
+        [
+          192.0,
+          56.0
+        ],
+        [
+          192.0,
+          29.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 19,
+      "rotated_box": [
+        210.48983764648438,
+        152.8089599609375,
+        25.982484817504883,
+        68.0073471069336,
+        -0.8425242304801941
+      ],
+      "label": "19:gene:",
+      "points": [
+        [
+          197.0,
+          119.0
+        ],
+        [
+          197.0,
+          187.0
+        ],
+        [
+          223.0,
+          187.0
+        ],
+        [
+          223.0,
+          119.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        175.5,
+        104.99998474121094,
+        79.88004302978516,
+        193.93856811523438,
+        -14.989862442016602
+      ],
+      "label": "30:activate_relation:4|19",
+      "points": [
+        [
+          162.0,
+          209.0
+        ],
+        [
+          113.0,
+          26.0
+        ],
+        [
+          189.0,
+          1.0
+        ],
+        [
+          237.0,
+          184.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 0,
+      "rotated_box": [
+        192.5,
+        81.50000762939453,
+        22.07023048400879,
+        20.072492599487305,
+        -2.726310968399048
+      ],
+      "label": "0:activate:4|19",
+      "points": [
+        [
+          164.0,
+          55.0
+        ],
+        [
+          164.0,
+          91.0
+        ],
+        [
+          204.0,
+          91.0
+        ],
+        [
+          204.0,
+          55.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_4673209_bin_oncotarget-06-22918-g007.jpg",
+  "imageData": null,
+  "imageHeight": 458,
+  "imageWidth": 777
+}

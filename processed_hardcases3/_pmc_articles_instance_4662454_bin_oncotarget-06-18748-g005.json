@@ -1,0 +1,442 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 1,
+      "rotated_box": [
+        123.0,
+        82.5,
+        17.0,
+        16.0,
+        -90.0
+      ],
+      "label": "1:gene:",
+      "points": [
+        [
+          115.0,
+          74.0
+        ],
+        [
+          115.0,
+          91.0
+        ],
+        [
+          131.0,
+          91.0
+        ],
+        [
+          131.0,
+          74.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 2,
+      "rotated_box": [
+        121.0,
+        56.0,
+        14.0,
+        40.0,
+        -90.0
+      ],
+      "label": "2:gene:",
+      "points": [
+        [
+          101.0,
+          49.0
+        ],
+        [
+          101.0,
+          63.0
+        ],
+        [
+          141.0,
+          63.0
+        ],
+        [
+          141.0,
+          49.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 3,
+      "rotated_box": [
+        153.5,
+        81.5,
+        13.0,
+        15.0,
+        -90.0
+      ],
+      "label": "3:gene:",
+      "points": [
+        [
+          146.0,
+          75.0
+        ],
+        [
+          146.0,
+          88.0
+        ],
+        [
+          161.0,
+          88.0
+        ],
+        [
+          161.0,
+          75.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 5,
+      "rotated_box": [
+        45.49999237060547,
+        165.99998474121094,
+        54.99999237060547,
+        37.99999237060547,
+        0.0
+      ],
+      "label": "5:gene:",
+      "points": [
+        [
+          18.0,
+          147.0
+        ],
+        [
+          18.0,
+          185.0
+        ],
+        [
+          73.0,
+          185.0
+        ],
+        [
+          73.0,
+          147.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        86.99999237060547,
+        115.00000762939453,
+        199.59164428710938,
+        72.07759094238281,
+        -46.23640823364258
+      ],
+      "label": "47:activate_relation:[1,2,3]|5",
+      "points": [
+        [
+          44.0,
+          212.0
+        ],
+        [
+          -5.0,
+          160.0
+        ],
+        [
+          130.0,
+          18.0
+        ],
+        [
+          180.0,
+          70.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 31,
+      "rotated_box": [
+        47.31541442871094,
+        130.06451416015625,
+        28.330387115478516,
+        17.92449378967285,
+        -88.55990600585938
+      ],
+      "label": "31:activate:[1,2,3]|5",
+      "points": [
+        [
+          39.0,
+          116.0
+        ],
+        [
+          39.0,
+          146.0
+        ],
+        [
+          136.0,
+          146.0
+        ],
+        [
+          136.0,
+          116.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 10,
+      "rotated_box": [
+        287.5,
+        148.0,
+        16.0,
+        57.0,
+        -90.0
+      ],
+      "label": "10:gene:",
+      "points": [
+        [
+          259.0,
+          140.0
+        ],
+        [
+          259.0,
+          156.0
+        ],
+        [
+          316.0,
+          156.0
+        ],
+        [
+          316.0,
+          140.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        208.0,
+        101.5,
+        61.80047607421875,
+        238.59945678710938,
+        -64.95379638671875
+      ],
+      "label": "56:activate_relation:[1,2,3]|10",
+      "points": [
+        [
+          303.0,
+          180.0
+        ],
+        [
+          90.0,
+          80.0
+        ],
+        [
+          113.0,
+          23.0
+        ],
+        [
+          327.0,
+          123.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 37,
+      "rotated_box": [
+        287.8724060058594,
+        126.6668701171875,
+        18.942514419555664,
+        20.522268295288086,
+        -89.19306945800781
+      ],
+      "label": "37:activate:[1,2,3]|10",
+      "points": [
+        [
+          234.0,
+          117.0
+        ],
+        [
+          234.0,
+          136.0
+        ],
+        [
+          298.0,
+          136.0
+        ],
+        [
+          298.0,
+          117.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 9,
+      "rotated_box": [
+        241.0,
+        183.5,
+        27.0,
+        96.0,
+        -90.0
+      ],
+      "label": "9:gene:",
+      "points": [
+        [
+          193.0,
+          170.0
+        ],
+        [
+          193.0,
+          197.0
+        ],
+        [
+          289.0,
+          197.0
+        ],
+        [
+          289.0,
+          170.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        186.00003051757812,
+        131.5,
+        85.58516693115234,
+        238.11802673339844,
+        -46.70473098754883
+      ],
+      "label": "54:activate_relation:[1,2,3]|9",
+      "points": [
+        [
+          243.0,
+          244.0
+        ],
+        [
+          70.0,
+          81.0
+        ],
+        [
+          129.0,
+          19.0
+        ],
+        [
+          302.0,
+          182.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 36,
+      "rotated_box": [
+        224.5,
+        157.0,
+        22.0,
+        15.0,
+        -90.0
+      ],
+      "label": "36:activate:[1,2,3]|9",
+      "points": [
+        [
+          146.0,
+          114.0
+        ],
+        [
+          146.0,
+          168.0
+        ],
+        [
+          232.0,
+          168.0
+        ],
+        [
+          232.0,
+          114.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_4662454_bin_oncotarget-06-18748-g005.jpg",
+  "imageData": null,
+  "imageHeight": 445,
+  "imageWidth": 600
+}

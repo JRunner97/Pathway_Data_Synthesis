@@ -1,0 +1,127 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "flags": {},
+      "points": [
+        [
+          412.0,
+          42.0
+        ],
+        [
+          412.0,
+          75.0
+        ],
+        [
+          480.0,
+          75.0
+        ],
+        [
+          480.0,
+          42.0
+        ]
+      ],
+      "label": "10:gene:Ras",
+      "shape_type": "polygon",
+      "line_color": null,
+      "fill_color": null
+    },
+    {
+      "flags": {},
+      "points": [
+        [
+          234.0,
+          8.0
+        ],
+        [
+          234.0,
+          58.0
+        ],
+        [
+          293.0,
+          58.0
+        ],
+        [
+          293.0,
+          8.0
+        ]
+      ],
+      "label": "14:gene:",
+      "shape_type": "polygon",
+      "line_color": null,
+      "fill_color": null
+    },
+    {
+      "flags": {},
+      "points": [
+        [
+          474.2010498046875,
+          87.87545776367188
+        ],
+        [
+          233.97918701171875,
+          52.49064636230469
+        ],
+        [
+          239.60101318359375,
+          -2.924530029296875
+        ],
+        [
+          479.8228759765625,
+          32.46028137207031
+        ]
+      ],
+      "label": "19:activate_relation:14|10",
+      "shape_type": "polygon",
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null
+    },
+    {
+      "flags": {},
+      "points": [
+        [
+          315.0,
+          34.0
+        ],
+        [
+          315.0,
+          70.0
+        ],
+        [
+          400.0,
+          70.0
+        ],
+        [
+          400.0,
+          34.0
+        ]
+      ],
+      "label": "0:activate:14|10",
+      "shape_type": "polygon",
+      "line_color": null,
+      "fill_color": null
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_1064104_bin_bcr958-9.jpg",
+  "imageData": null,
+  "imageHeight": 723,
+  "imageWidth": 600
+}

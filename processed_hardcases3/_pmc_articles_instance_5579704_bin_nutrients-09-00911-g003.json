@@ -1,0 +1,390 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        74.5,
+        33.5,
+        25.0,
+        105.0,
+        -90.0
+      ],
+      "label": "11:gene:fPolyphenolst",
+      "points": [
+        [
+          22.0,
+          21.0
+        ],
+        [
+          22.0,
+          46.0
+        ],
+        [
+          127.0,
+          46.0
+        ],
+        [
+          127.0,
+          21.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 11
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        92.0,
+        377.5,
+        25.0,
+        102.0,
+        -90.0
+      ],
+      "label": "24:gene:fPolyphenolst",
+      "points": [
+        [
+          41.0,
+          365.0
+        ],
+        [
+          41.0,
+          390.0
+        ],
+        [
+          143.0,
+          390.0
+        ],
+        [
+          143.0,
+          365.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 24
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        91.0,
+        205.5,
+        134.0,
+        373.0,
+        -0.0
+      ],
+      "component": [
+        11,
+        24,
+        32
+      ],
+      "label": "59:inhibit_relation:11|24",
+      "points": [
+        [
+          158.0,
+          392.0
+        ],
+        [
+          24.0,
+          388.0
+        ],
+        [
+          24.0,
+          19.0
+        ],
+        [
+          158.0,
+          23.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        144.00001525878906,
+        67.00000762939453,
+        31.11269760131836,
+        14.142135620117188,
+        -45.0
+      ],
+      "label": "32:inhibit:11|24",
+      "points": [
+        [
+          132.0,
+          51.0
+        ],
+        [
+          132.0,
+          83.0
+        ],
+        [
+          160.0,
+          83.0
+        ],
+        [
+          160.0,
+          51.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        688.5,
+        118.5,
+        23.0,
+        51.0,
+        -90.0
+      ],
+      "label": "15:gene:TNF-a",
+      "points": [
+        [
+          663.0,
+          107.0
+        ],
+        [
+          663.0,
+          130.0
+        ],
+        [
+          714.0,
+          130.0
+        ],
+        [
+          714.0,
+          107.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 15
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        368.0149230957031,
+        74.86507415771484,
+        96.36113739013672,
+        692.7079467773438,
+        -88.4827651977539
+      ],
+      "component": [
+        11,
+        15,
+        34
+      ],
+      "label": "61:inhibit_relation:11|15",
+      "points": [
+        [
+          712.9718017578125,
+          132.19937133789062
+        ],
+        [
+          20.7913875579834,
+          113.86565399169922
+        ],
+        [
+          23.05810546875,
+          17.53076171875
+        ],
+        [
+          715.238525390625,
+          35.864479064941406
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        59.0,
+        103.5,
+        16.923080444335938,
+        27.615388870239258,
+        -67.38013458251953
+      ],
+      "label": "34:inhibit:11|15",
+      "points": [
+        [
+          42.0,
+          65.0
+        ],
+        [
+          42.0,
+          115.0
+        ],
+        [
+          80.0,
+          115.0
+        ],
+        [
+          80.0,
+          65.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        675.4999389648438,
+        44.5,
+        106.99998474121094,
+        28.999996185302734,
+        0.0
+      ],
+      "label": "12:gene:Polyphenols ",
+      "points": [
+        [
+          622.0,
+          30.0
+        ],
+        [
+          622.0,
+          59.0
+        ],
+        [
+          729.0,
+          59.0
+        ],
+        [
+          729.0,
+          30.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 12
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        374.9999694824219,
+        78.00001525878906,
+        113.99952697753906,
+        704.32666015625,
+        -89.83722686767578
+      ],
+      "component": [
+        11,
+        12,
+        33
+      ],
+      "label": "60:inhibit_relation:11|12",
+      "points": [
+        [
+          727.0,
+          136.0
+        ],
+        [
+          23.0,
+          134.0
+        ],
+        [
+          23.0,
+          20.0
+        ],
+        [
+          727.0,
+          22.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        106.70740509033203,
+        121.38591766357422,
+        31.400632858276367,
+        22.51546287536621,
+        -9.162346839904785
+      ],
+      "label": "33:inhibit:11|12",
+      "points": [
+        [
+          92.0,
+          67.0
+        ],
+        [
+          92.0,
+          132.0
+        ],
+        [
+          121.0,
+          132.0
+        ],
+        [
+          121.0,
+          67.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_5579704_bin_nutrients-09-00911-g003.jpg",
+  "imageData": null,
+  "imageHeight": 526,
+  "imageWidth": 756
+}

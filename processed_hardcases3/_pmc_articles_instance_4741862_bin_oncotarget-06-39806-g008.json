@@ -1,0 +1,162 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 17,
+      "rotated_box": [
+        714.5,
+        257.5,
+        23.0,
+        71.0,
+        -90.0
+      ],
+      "label": "17:gene:G1 arrest",
+      "points": [
+        [
+          679.0,
+          246.0
+        ],
+        [
+          679.0,
+          269.0
+        ],
+        [
+          750.0,
+          269.0
+        ],
+        [
+          750.0,
+          246.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 21,
+      "rotated_box": [
+        627.5573120117188,
+        139.6051025390625,
+        22.12874984741211,
+        28.01784896850586,
+        -2.045408248901367
+      ],
+      "label": "21:gene:",
+      "points": [
+        [
+          616.0,
+          126.0
+        ],
+        [
+          616.0,
+          154.0
+        ],
+        [
+          639.0,
+          154.0
+        ],
+        [
+          639.0,
+          126.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        669.5,
+        208.99998474121094,
+        67.83645629882812,
+        200.56723022460938,
+        -39.43280029296875
+      ],
+      "label": "27:activate_relation:21|17",
+      "points": [
+        [
+          707.0,
+          308.0
+        ],
+        [
+          582.0,
+          156.0
+        ],
+        [
+          632.0,
+          110.0
+        ],
+        [
+          757.0,
+          262.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "ID": 6,
+      "rotated_box": [
+        705.0,
+        233.5,
+        27.0,
+        28.0,
+        -90.0
+      ],
+      "label": "6:activate:21|17",
+      "points": [
+        [
+          633.0,
+          165.0
+        ],
+        [
+          633.0,
+          248.0
+        ],
+        [
+          733.0,
+          248.0
+        ],
+        [
+          733.0,
+          165.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_4741862_bin_oncotarget-06-39806-g008.jpg",
+  "imageData": null,
+  "imageHeight": 393,
+  "imageWidth": 750
+}

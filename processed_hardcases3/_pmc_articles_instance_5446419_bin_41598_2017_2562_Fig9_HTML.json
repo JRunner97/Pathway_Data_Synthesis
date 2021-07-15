@@ -1,0 +1,462 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        265.0,
+        408.0,
+        22.0,
+        114.0,
+        -90.0
+      ],
+      "label": "13:gene:Eraa -ATPase",
+      "points": [
+        [
+          208.0,
+          397.0
+        ],
+        [
+          208.0,
+          419.0
+        ],
+        [
+          322.0,
+          419.0
+        ],
+        [
+          322.0,
+          397.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 13
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        261.0,
+        502.0,
+        28.0,
+        170.0,
+        -90.0
+      ],
+      "label": "16:gene:CPAISprerone",
+      "points": [
+        [
+          176.0,
+          488.0
+        ],
+        [
+          176.0,
+          516.0
+        ],
+        [
+          346.0,
+          516.0
+        ],
+        [
+          346.0,
+          488.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 16
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        261.0,
+        456.5,
+        176.0,
+        125.0,
+        0.0
+      ],
+      "component": [
+        16,
+        13,
+        24
+      ],
+      "label": "54:inhibit_relation:16|13",
+      "points": [
+        [
+          173.62111801242236,
+          518.3788819875776
+        ],
+        [
+          179.62111801242236,
+          393.37888198757764
+        ],
+        [
+          349.62111801242236,
+          393.37888198757764
+        ],
+        [
+          343.62111801242236,
+          518.3788819875776
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        256.5,
+        433.0,
+        18.0,
+        31.0,
+        -90.0
+      ],
+      "label": "24:inhibit:16|13",
+      "points": [
+        [
+          243.0,
+          429.0
+        ],
+        [
+          243.0,
+          493.0
+        ],
+        [
+          272.0,
+          493.0
+        ],
+        [
+          272.0,
+          429.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        214.00003051757812,
+        45.0,
+        35.95383071899414,
+        144.5244903564453,
+        -89.18734741210938
+      ],
+      "label": "8:gene:MRgvsth",
+      "points": [
+        [
+          142.0,
+          26.0
+        ],
+        [
+          142.0,
+          64.0
+        ],
+        [
+          286.0,
+          64.0
+        ],
+        [
+          286.0,
+          26.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 8
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        128.0,
+        125.0,
+        36.0,
+        84.0,
+        -90.0
+      ],
+      "label": "32:gene:",
+      "points": [
+        [
+          86.0,
+          107.0
+        ],
+        [
+          86.0,
+          143.0
+        ],
+        [
+          170.0,
+          143.0
+        ],
+        [
+          170.0,
+          107.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 32
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        186.0,
+        84.5,
+        202.0,
+        119.0,
+        0.0
+      ],
+      "component": [
+        8,
+        32,
+        20
+      ],
+      "label": "50:inhibit_relation:8|32",
+      "points": [
+        [
+          85.0,
+          144.0
+        ],
+        [
+          87.0,
+          25.0
+        ],
+        [
+          287.0,
+          25.0
+        ],
+        [
+          285.0,
+          144.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        169.0,
+        84.0,
+        26.0,
+        28.0,
+        -90.0
+      ],
+      "label": "20:inhibit:8|32",
+      "points": [
+        [
+          154.0,
+          52.0
+        ],
+        [
+          154.0,
+          99.0
+        ],
+        [
+          194.0,
+          99.0
+        ],
+        [
+          194.0,
+          52.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        421.0,
+        476.0,
+        28.0,
+        124.0,
+        -90.0
+      ],
+      "label": "14:gene:B-thenin-",
+      "points": [
+        [
+          359.0,
+          462.0
+        ],
+        [
+          359.0,
+          490.0
+        ],
+        [
+          483.0,
+          490.0
+        ],
+        [
+          483.0,
+          462.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 14
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        433.49993896484375,
+        559.4999389648438,
+        218.99996948242188,
+        26.999996185302734,
+        0.0
+      ],
+      "label": "17:gene:Anti-prblife ration",
+      "points": [
+        [
+          324.0,
+          546.0
+        ],
+        [
+          324.0,
+          573.0
+        ],
+        [
+          543.0,
+          573.0
+        ],
+        [
+          543.0,
+          546.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 17
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        432.4998779296875,
+        517.0,
+        224.99996948242188,
+        115.99998474121094,
+        0.0
+      ],
+      "component": [
+        14,
+        17,
+        7
+      ],
+      "label": "47:activate_relation:14|17",
+      "points": [
+        [
+          319.99993896484375,
+          575.0
+        ],
+        [
+          325.99993896484375,
+          459.0
+        ],
+        [
+          544.9999389648438,
+          459.0
+        ],
+        [
+          538.9999389648438,
+          575.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        415.0,
+        540.0,
+        16.0,
+        20.0,
+        -90.0
+      ],
+      "label": "7:activate:14|17",
+      "points": [
+        [
+          405.0,
+          487.0
+        ],
+        [
+          405.0,
+          548.0
+        ],
+        [
+          425.0,
+          548.0
+        ],
+        [
+          425.0,
+          487.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 7
+      }
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_5446419_bin_41598_2017_2562_Fig9_HTML.jpg",
+  "imageData": null,
+  "imageHeight": 586,
+  "imageWidth": 675
+}

@@ -1,0 +1,168 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        441.0,
+        182.0,
+        18.0,
+        38.0,
+        -90.0
+      ],
+      "label": "11:gene:",
+      "points": [
+        [
+          422.0,
+          173.0
+        ],
+        [
+          422.0,
+          191.0
+        ],
+        [
+          460.0,
+          191.0
+        ],
+        [
+          460.0,
+          173.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 11
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        405.5,
+        260.0,
+        20.0,
+        29.0,
+        -90.0
+      ],
+      "label": "12:gene:",
+      "points": [
+        [
+          391.0,
+          250.0
+        ],
+        [
+          391.0,
+          270.0
+        ],
+        [
+          420.0,
+          270.0
+        ],
+        [
+          420.0,
+          250.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 12
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        425.153564453125,
+        221.3605499267578,
+        126.1595458984375,
+        37.539451599121094,
+        -68.07039642333984
+      ],
+      "component": [
+        11,
+        12,
+        16
+      ],
+      "label": "17:inhibit_relation:11|12",
+      "points": [
+        [
+          419.0069580078125,
+          286.8859558105469
+        ],
+        [
+          388.07110595703125,
+          263.2104797363281
+        ],
+        [
+          431.3001708984375,
+          155.83514404296875
+        ],
+        [
+          462.23602294921875,
+          179.5106201171875
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        421.0,
+        236.0,
+        20.0,
+        26.0,
+        -90.0
+      ],
+      "label": "16:inhibit:11|12",
+      "points": [
+        [
+          407.0,
+          206.0
+        ],
+        [
+          407.0,
+          249.0
+        ],
+        [
+          439.0,
+          249.0
+        ],
+        [
+          439.0,
+          206.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_5444762_bin_oncotarget-08-30524-g005.jpg",
+  "imageData": null,
+  "imageHeight": 322,
+  "imageWidth": 672
+}

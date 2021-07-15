@@ -1,0 +1,540 @@
+{
+  "version": null,
+  "flags": {},
+  "shapes": [
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        462.5,
+        16.499998092651367,
+        46.99999237060547,
+        26.999996185302734,
+        0.0
+      ],
+      "label": "9:gene:EGF",
+      "points": [
+        [
+          439.0,
+          3.0
+        ],
+        [
+          439.0,
+          30.0
+        ],
+        [
+          486.0,
+          30.0
+        ],
+        [
+          486.0,
+          3.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 9
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        524.0,
+        116.5,
+        66.0,
+        31.0,
+        -0.0
+      ],
+      "label": "13:gene:EGFRI-",
+      "points": [
+        [
+          491.0,
+          101.0
+        ],
+        [
+          491.0,
+          132.0
+        ],
+        [
+          557.0,
+          132.0
+        ],
+        [
+          557.0,
+          101.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 13
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        372.0,
+        266.5,
+        29.0,
+        50.0,
+        -90.0
+      ],
+      "label": "15:gene:fRASt",
+      "points": [
+        [
+          347.0,
+          252.0
+        ],
+        [
+          347.0,
+          281.0
+        ],
+        [
+          397.0,
+          281.0
+        ],
+        [
+          397.0,
+          252.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 15
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        424.0769348144531,
+        133.54641723632812,
+        320.7829895019531,
+        182.4752655029297,
+        -42.20729446411133
+      ],
+      "component": [
+        [
+          "9",
+          "13"
+        ],
+        15,
+        27
+      ],
+      "label": "52:activate_relation:[9,13]|15",
+      "points": [
+        [
+          366.5667419433594,
+          308.88128662109375
+        ],
+        [
+          250.25485229492188,
+          168.02459716796875
+        ],
+        [
+          481.5871887207031,
+          -41.7884521484375
+        ],
+        [
+          597.8990478515625,
+          99.0682373046875
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        406.0,
+        248.0,
+        22.0,
+        28.0,
+        -90.0
+      ],
+      "label": "27:activate:[9,13]|15",
+      "points": [
+        [
+          389.0,
+          206.0
+        ],
+        [
+          389.0,
+          258.0
+        ],
+        [
+          458.0,
+          258.0
+        ],
+        [
+          458.0,
+          206.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        207.5,
+        736.0,
+        28.0,
+        59.0,
+        -90.0
+      ],
+      "label": "25:gene:DNA",
+      "points": [
+        [
+          178.0,
+          722.0
+        ],
+        [
+          178.0,
+          750.0
+        ],
+        [
+          237.0,
+          750.0
+        ],
+        [
+          237.0,
+          722.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 25
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        638.0,
+        452.5,
+        37.0,
+        74.0,
+        -90.0
+      ],
+      "label": "37:gene:",
+      "points": [
+        [
+          601.0,
+          434.0
+        ],
+        [
+          601.0,
+          471.0
+        ],
+        [
+          675.0,
+          471.0
+        ],
+        [
+          675.0,
+          434.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 37
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        440.6589050292969,
+        612.7960815429688,
+        594.21923828125,
+        116.16352844238281,
+        -34.24903106689453
+      ],
+      "component": [
+        37,
+        25,
+        8
+      ],
+      "label": "48:activate_relation:37|25",
+      "points": [
+        [
+          227.7562255859375,
+          828.0170288085938
+        ],
+        [
+          166.97430419921875,
+          728.8685913085938
+        ],
+        [
+          653.5616455078125,
+          397.57513427734375
+        ],
+        [
+          714.3435668945312,
+          496.72357177734375
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        561.0,
+        581.5,
+        23.0,
+        22.0,
+        -90.0
+      ],
+      "label": "8:activate:37|25",
+      "points": [
+        [
+          543.0,
+          467.0
+        ],
+        [
+          543.0,
+          600.0
+        ],
+        [
+          641.0,
+          600.0
+        ],
+        [
+          641.0,
+          467.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 8
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        496.5,
+        408.0,
+        22.0,
+        87.0,
+        -90.0
+      ],
+      "label": "20:gene:Selumetinib",
+      "points": [
+        [
+          453.0,
+          397.0
+        ],
+        [
+          453.0,
+          419.0
+        ],
+        [
+          540.0,
+          419.0
+        ],
+        [
+          540.0,
+          397.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 20
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        496.5,
+        440.0,
+        32.0,
+        79.0,
+        -90.0
+      ],
+      "label": "22:gene:TrametinibBinimetnib",
+      "points": [
+        [
+          457.0,
+          424.0
+        ],
+        [
+          457.0,
+          456.0
+        ],
+        [
+          536.0,
+          456.0
+        ],
+        [
+          536.0,
+          424.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 22
+      }
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        372.02685546875,
+        627.8494873046875,
+        30.0,
+        356.9999694824219,
+        -90.0
+      ],
+      "label": "24:gene:Cell growth and proliferation",
+      "points": [
+        [
+          194.0,
+          613.0
+        ],
+        [
+          194.0,
+          643.0
+        ],
+        [
+          551.0,
+          643.0
+        ],
+        [
+          551.0,
+          613.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 24
+      }
+    },
+    {
+      "line_color": [
+        255,
+        0,
+        0,
+        128
+      ],
+      "fill_color": null,
+      "rotated_box": [
+        371.4999694824219,
+        519.4999389648438,
+        244.99996948242188,
+        356.99993896484375,
+        -90.0
+      ],
+      "component": [
+        [
+          "20",
+          "22"
+        ],
+        24,
+        33
+      ],
+      "label": "62:inhibit_relation:[20,22]|24",
+      "points": [
+        [
+          193.0,
+          642.0
+        ],
+        [
+          193.0,
+          397.0
+        ],
+        [
+          550.0,
+          397.0
+        ],
+        [
+          550.0,
+          642.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {}
+    },
+    {
+      "line_color": null,
+      "fill_color": null,
+      "rotated_box": [
+        419.5,
+        421.5,
+        35.0,
+        17.0,
+        -90.0
+      ],
+      "label": "33:inhibit:[20,22]|24",
+      "points": [
+        [
+          411.0,
+          404.0
+        ],
+        [
+          411.0,
+          439.0
+        ],
+        [
+          448.0,
+          439.0
+        ],
+        [
+          448.0,
+          404.0
+        ]
+      ],
+      "group_id": null,
+      "shape_type": "polygon",
+      "flags": {
+        "ID": 33
+      }
+    }
+  ],
+  "lineColor": [
+    0,
+    255,
+    0,
+    128
+  ],
+  "fillColor": [
+    255,
+    0,
+    0,
+    128
+  ],
+  "imagePath": "_pmc_articles_instance_5412337_bin_ijms-18-00752-g001.jpg",
+  "imageData": null,
+  "imageHeight": 829,
+  "imageWidth": 798
+}
