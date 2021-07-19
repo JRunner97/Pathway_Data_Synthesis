@@ -31,13 +31,9 @@ def radial_profile(data, center):
 # x,y now define a center
 def check_slice(template_im,slice_shape,x,y,padding):
 
-    threshold = 50
+    threshold = 30
 
     template_slice = template_im[y-padding:y+slice_shape[0]+padding,x-padding:x+slice_shape[1]+padding,:]
-
-    template_slice = np.ones((280,339,3)) * 255
-    template_slice = template_slice.astype('uint8')
-    print(template_slice.shape)
 
     grey_slice = cv2.cvtColor(template_slice, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(grey_slice)
@@ -62,9 +58,8 @@ def check_slice(template_im,slice_shape,x,y,padding):
         return False
 
 
-
 # get image and json filepaths
-directory = "processed_hardcases3"
+directory = "processed_hardcases4"
 images = []
 json_files = []
 for filename in os.listdir(directory):
@@ -163,10 +158,10 @@ for current_imagepath, json_file in zip(images,json_files):
 
         # get all relation's elements and elements inside of relationship slice
         rel_pts = np.clip(np.array(relation['points']),0,np.inf)
-        min_x = int(min(rel_pts[:,0]))
-        min_y = int(min(rel_pts[:,1]))
-        max_x = int(max(rel_pts[:,0]))
-        max_y = int(max(rel_pts[:,1]))
+        el_min_x = int(min(rel_pts[:,0]))
+        el_min_y = int(min(rel_pts[:,1]))
+        el_max_x = int(max(rel_pts[:,0]))
+        el_max_y = int(max(rel_pts[:,1]))
         elements_to_save = []
         extra_elements_to_save = []
         for element in tmp_elements:
@@ -214,6 +209,17 @@ for current_imagepath, json_file in zip(images,json_files):
 
         if indicator_json is None:
             continue
+
+        ind_pts = np.clip(np.array(indicator_json['points']),0,np.inf)
+        ind_min_x = int(min(ind_pts[:,0]))
+        ind_min_y = int(min(ind_pts[:,1]))
+        ind_max_x = int(max(ind_pts[:,0]))
+        ind_max_y = int(max(ind_pts[:,1]))
+
+        min_x = min([el_min_x,ind_min_x])
+        min_y = min([el_min_y,ind_min_y])
+        max_x = max([el_max_x,ind_max_x])
+        max_y = max([el_max_y,ind_max_y])
 
         # # find additional indicators inside of relationship slice
         # extra_indicators_to_save = []
@@ -340,7 +346,8 @@ class template_thread(threading.Thread):
         
         # how many images per template
         stop_child_flag = False
-        num_copies = 372
+        # num_copies = 372
+        num_copies = 93
         for copy_idx in range(num_copies):
 
             copy_idx *= 4
@@ -403,7 +410,8 @@ class copy_thread(threading.Thread):
         # put relations on template and generate annotation
         element_indx = 0
         shapes = []
-        for relation_idx in range(30):
+        # for relation_idx in range(30):
+        for relation_idx in range(5):
             slice_idx = random.randint(0,len(processed_slices)-1)
 
             current_slice = processed_slices[slice_idx]
@@ -416,7 +424,7 @@ class copy_thread(threading.Thread):
             # check if queried coords are a valid location
             for idx in range(50):
 
-                padding = 20
+                padding = 0
 
                 # subtracted max bounds to ensure valid coords
                 slice_shape = current_slice.shape
@@ -526,6 +534,20 @@ class copy_thread(threading.Thread):
                     shapes.append(current_indicator_json)
 
                     break
+
+
+
+            tmp_template_im = copy.deepcopy(template_im)
+            tmp_template_im[np.all(tmp_template_im >= (245, 245, 245), axis=-1)] = template_mode_pix
+
+            # save json and new image
+            im_dir = "output_test"
+            image_path = str(self.copyID)+ "_" + str(relation_idx) + ".png"
+            cv2.imwrite(os.path.join(im_dir, image_path), tmp_template_im)
+            imageHeight = tmp_template_im.shape[0]
+            imageWidth = tmp_template_im.shape[1]
+            template_label_file = label_file.LabelFile()
+            template_label_file.save(os.path.join(im_dir,str(self.copyID) + ".json"),shapes,image_path,imageHeight,imageWidth)
 
         
 
