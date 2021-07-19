@@ -101,6 +101,7 @@ class LabelFile(object):
             fillColor=None,
             otherData=None,
             flags=None,
+            imageData=None
     ):
         if otherData is None:
             otherData = {}
@@ -115,7 +116,7 @@ class LabelFile(object):
             lineColor=[0, 255, 0, 128],
             fillColor=[255, 0, 0, 128],
             imagePath=imagePath,
-            imageData=None,
+            imageData=imageData,
             imageHeight=imageHeight,
             imageWidth=imageWidth,
         )

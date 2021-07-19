@@ -73,11 +73,11 @@ for current_imagepath, json_file in zip(images,json_files):
     #     tmp_relations = tmp_relations[-3:]
 
     # get 3 smallest relations
-    if len(relation_sizes) >=3:
+    if len(relation_sizes) >=6:
         sorted_indices = np.argsort(np.array(relation_sizes))
         tmp_relations = np.array(tmp_relations)
         tmp_relations = tmp_relations[sorted_indices]
-        tmp_relations = tmp_relations[:3]
+        tmp_relations = tmp_relations[:6]
 
 
     # get elements for each relation

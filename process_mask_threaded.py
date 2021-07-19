@@ -27,13 +27,16 @@ def radial_profile(data, center):
     return radialprofile 
 
 
-# TODO:: add check to see if all pixels are the same, then don't even have to run the rest
 # x,y now define a center
 def check_slice(template_im,slice_shape,x,y,padding):
 
-    threshold = 30
+    threshold = 50
 
     template_slice = template_im[y-padding:y+slice_shape[0]+padding,x-padding:x+slice_shape[1]+padding,:]
+
+    # if all pixels are the same, then don't even have to run the rest of check
+    if np.all(template_slice == template_slice[0,0,0]):
+        return True
 
     grey_slice = cv2.cvtColor(template_slice, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(grey_slice)
@@ -59,7 +62,7 @@ def check_slice(template_im,slice_shape,x,y,padding):
 
 
 # get image and json filepaths
-directory = "processed_hardcases4"
+directory = "processed_hardcases5"
 images = []
 json_files = []
 for filename in os.listdir(directory):
@@ -330,6 +333,7 @@ for current_imagepath, json_file in zip(images,json_files):
 
 processed_slices = relation_slices
 
+print(str(len(processed_slices)))
 
 
 class template_thread(threading.Thread):
@@ -411,7 +415,7 @@ class copy_thread(threading.Thread):
         element_indx = 0
         shapes = []
         # for relation_idx in range(30):
-        for relation_idx in range(5):
+        for relation_idx in range(30):
             slice_idx = random.randint(0,len(processed_slices)-1)
 
             current_slice = processed_slices[slice_idx]
@@ -537,17 +541,17 @@ class copy_thread(threading.Thread):
 
 
 
-            tmp_template_im = copy.deepcopy(template_im)
-            tmp_template_im[np.all(tmp_template_im >= (245, 245, 245), axis=-1)] = template_mode_pix
+            # tmp_template_im = copy.deepcopy(template_im)
+            # tmp_template_im[np.all(tmp_template_im >= (245, 245, 245), axis=-1)] = template_mode_pix
 
-            # save json and new image
-            im_dir = "output_test"
-            image_path = str(self.copyID)+ "_" + str(relation_idx) + ".png"
-            cv2.imwrite(os.path.join(im_dir, image_path), tmp_template_im)
-            imageHeight = tmp_template_im.shape[0]
-            imageWidth = tmp_template_im.shape[1]
-            template_label_file = label_file.LabelFile()
-            template_label_file.save(os.path.join(im_dir,str(self.copyID) + ".json"),shapes,image_path,imageHeight,imageWidth)
+            # # save json and new image
+            # im_dir = "output_test"
+            # image_path = str(self.copyID)+ "_" + str(relation_idx) + ".png"
+            # cv2.imwrite(os.path.join(im_dir, image_path), tmp_template_im)
+            # imageHeight = tmp_template_im.shape[0]
+            # imageWidth = tmp_template_im.shape[1]
+            # template_label_file = label_file.LabelFile()
+            # template_label_file.save(os.path.join(im_dir,str(self.copyID) + ".json"),shapes,image_path,imageHeight,imageWidth)
 
         
 

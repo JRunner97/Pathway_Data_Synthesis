@@ -64,7 +64,7 @@ for current_imagepath, json_file in zip(images,json_files):
     imageWidth = data["imageWidth"]
     json_filename = json_files[count].split("\\")[-1]
     print(json_filename)
-    target_dir = "processed_hardcases5"
+    target_dir = "processed_hardcases6"
     template_label_file = label_file.LabelFile()
     template_label_file.save(os.path.join(target_dir, json_filename),filtered_shapes,image_path,imageHeight,imageWidth,imageData=data["imageData"])
 
