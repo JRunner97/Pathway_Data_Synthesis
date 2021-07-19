@@ -66,11 +66,18 @@ for current_imagepath, json_file in zip(images,json_files):
     print(len(tmp_relations))
 
     # get 3 largest relations
+    # if len(relation_sizes) >=3:
+    #     sorted_indices = np.argsort(np.array(relation_sizes))
+    #     tmp_relations = np.array(tmp_relations)
+    #     tmp_relations = tmp_relations[sorted_indices]
+    #     tmp_relations = tmp_relations[-3:]
+
+    # get 3 smallest relations
     if len(relation_sizes) >=3:
         sorted_indices = np.argsort(np.array(relation_sizes))
         tmp_relations = np.array(tmp_relations)
         tmp_relations = tmp_relations[sorted_indices]
-        tmp_relations = tmp_relations[-3:]
+        tmp_relations = tmp_relations[:3]
 
 
     # get elements for each relation
@@ -143,8 +150,8 @@ for current_imagepath, json_file in zip(images,json_files):
     imageWidth = data["imageWidth"]
     json_filename = json_files[count].split("\\")[-1]
     print(json_filename)
-    target_dir = "processed_hardcases3"
+    target_dir = "processed_hardcases4"
     template_label_file = label_file.LabelFile()
-    template_label_file.save(os.path.join(target_dir, json_filename),shapes,image_path,imageHeight,imageWidth)
+    template_label_file.save(os.path.join(target_dir, json_filename),shapes,image_path,imageHeight,imageWidth,imageData=data["imageData"])
 
     count+=1
