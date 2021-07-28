@@ -62,7 +62,7 @@ def check_slice(template_im,slice_shape,x,y,padding):
 
 
 # get image and json filepaths
-directory = "processed_hardcases5"
+directory = "/storage/hpc/data/jltmh3/datasets/processed_hardcases5"
 images = []
 json_files = []
 for filename in os.listdir(directory):
@@ -559,7 +559,7 @@ class copy_thread(threading.Thread):
 
 
         # save json and new image
-        im_dir = "output_test"
+        im_dir = "/storage/hpc/data/jltmh3/output/output_training_data4"
         image_path = str(self.copyID) + ".png"
         cv2.imwrite(os.path.join(im_dir, image_path), template_im)
         imageHeight = template_im.shape[0]
@@ -572,7 +572,7 @@ class copy_thread(threading.Thread):
 
 # loop through all templates
 stop_flag = False
-directory = "templates"
+directory = "/storage/hpc/data/jltmh3/datasets/templates"
 template_list = os.listdir(directory)
 # TODO:: make this more clean
 for template_idx in range(len(template_list)):
