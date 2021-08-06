@@ -97,7 +97,7 @@ def draw_spline(img,x_span,y_span,thickness,arrow_placement):
     base_points = np.stack((X_,Y_)).T
     base_points = np.unique(base_points, axis=0)
 
-    print(base_points)
+    # print(base_points)
 
     base_points_shape = base_points.shape
     print(base_points_shape)
@@ -123,14 +123,23 @@ def draw_spline(img,x_span,y_span,thickness,arrow_placement):
     # TODO:: do this faster
     max_idx = base_points.shape[0] - 1
     comparison_pt = None
-    dist = 1000
+    dist = 50
+    candidate_points = []
+    candidate_dists = []
     if arrow_placement == END:
         for idx in range(max_idx-1,0,-1):
             if base_points[idx,0] != source_point[0] and base_points[idx,1] != source_point[1]:
                 tmp_dist = math.dist(base_points[idx], source_point)
                 if tmp_dist < dist:
-                    comparison_pt = base_points[idx]
-                    dist = tmp_dist
+                    candidate_points.append(base_points[idx])
+                    candidate_dists.append(tmp_dist)
+                    # dist = tmp_dist
+
+        if len(candidate_dists) >= lag:
+            candidate_dists = np.array(candidate_dists)
+            candidate_idxs = np.argsort(candidate_dists)
+            # TODO:: fix assumes candidate idxs is length lag at least
+            comparison_pt = candidate_points[candidate_idxs[lag]]
 
 
         # check if slope of line is too big or too small to rule out
@@ -159,13 +168,19 @@ def draw_spline(img,x_span,y_span,thickness,arrow_placement):
                 orientation = UP
 
     else:
-        # select distinct and closest
+        # select distinct and nth closest
         for idx in range(0,max_idx-1,1):
             if base_points[idx,0] != source_point[0] and base_points[idx,1] != source_point[1]:
                 tmp_dist = math.dist(base_points[idx], source_point)
                 if tmp_dist < dist:
-                    comparison_pt = base_points[idx]
-                    dist = tmp_dist
+                    candidate_points.append(base_points[idx])
+                    candidate_dists.append(tmp_dist)
+                    # dist = tmp_dist
+
+        if len(candidate_dists) >= lag:
+            candidate_dists = np.array(candidate_dists)
+            candidate_idxs = np.argsort(candidate_dists)
+            comparison_pt = candidate_points[candidate_idxs[lag]]
 
         # check if slope of line is too big or too small to rule out
         if comparison_pt is None:
@@ -191,22 +206,24 @@ def draw_spline(img,x_span,y_span,thickness,arrow_placement):
             else:
                 orientation = UP
                 
-    f=(y2-y1)/(x2-x1)
+    f=(y2-y1)/(x2-x1)*-1
 
 
     # f = interpolate.interp1d(sample_xs, sample_ys, fill_value='extrapolate')
 
-    img = cv2.circle(img, tuple([int(source_point[0]),int(source_point[1])]), 3, (0,255,0), -1)
-    img = cv2.circle(img, tuple([int(comparison_pt[0]),int(comparison_pt[1])]), 3, (0,0,255), -1)
+    # img = cv2.circle(img, tuple([int(source_point[0]),int(source_point[1])]), 3, (0,255,0), -1)
+    # img = cv2.circle(img, tuple([int(comparison_pt[0]),int(comparison_pt[1])]), 3, (0,0,255), -1)
 
     return img, f, orientation
 
 
 def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation):
 
-    lag = 10
-    tip_len = 5
-    base_len = 5
+    print('orient')
+    print(arrow_orientation)
+
+    tip_len = 15
+    base_len = 15
 
 
     # TODO:: small slope makes 10 lag used above to get slope estimate drift
@@ -219,41 +236,40 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation):
     else:
         tri_source = [x_span[0],y_span[0]]
 
-    # img = cv2.circle(img, tuple(tri_source), 3, (0,255,0), -1)
+    # img = cv2.circle(img, tuple(tri_source), 3, (40,255,0), -1)
 
 
     print('source')
     print(tri_source)
-    print('tip_slope')
+
+    print('tip slope')
     print(tip_slope)
 
-    if abs(tip_slope) > 10 or abs(tip_slope) < 3:
+    # if abs(tip_slope) > 10 or abs(tip_slope) < 1:
 
-        if arrow_orientation == UP:
-            pt1 = (tri_source[0]-base_len, tri_source[1])
-            pt2 = (tri_source[0], tri_source[1]-tip_len)
-            pt3 = (tri_source[0]+base_len, tri_source[1])
-        elif arrow_orientation == DOWN:
-            pt1 = (tri_source[0]+base_len, tri_source[1])
-            pt2 = (tri_source[0], tri_source[1]+tip_len)
-            pt3 = (tri_source[0]-base_len, tri_source[1])
-        elif arrow_orientation == LEFT:
-            pt1 = (tri_source[0], tri_source[1]-base_len)
-            pt2 = (tri_source[0]-tip_len, tri_source[1])
-            pt3 = (tri_source[0], tri_source[1]+base_len)
-        else:
-            pt1 = (tri_source[0], tri_source[1]+base_len)
-            pt2 = (tri_source[0]+tip_len, tri_source[1])
-            pt3 = (tri_source[0], tri_source[1]-base_len)
+    #     if arrow_orientation == UP:
+    #         pt1 = (tri_source[0]-base_len, tri_source[1])
+    #         pt2 = (tri_source[0], tri_source[1]-tip_len)
+    #         pt3 = (tri_source[0]+base_len, tri_source[1])
+    #     elif arrow_orientation == DOWN:
+    #         pt1 = (tri_source[0]+base_len, tri_source[1])
+    #         pt2 = (tri_source[0], tri_source[1]+tip_len)
+    #         pt3 = (tri_source[0]-base_len, tri_source[1])
+    #     elif arrow_orientation == LEFT:
+    #         pt1 = (tri_source[0], tri_source[1]-base_len)
+    #         pt2 = (tri_source[0]-tip_len, tri_source[1])
+    #         pt3 = (tri_source[0], tri_source[1]+base_len)
+    #     else:
+    #         pt1 = (tri_source[0], tri_source[1]+base_len)
+    #         pt2 = (tri_source[0]+tip_len, tri_source[1])
+    #         pt3 = (tri_source[0], tri_source[1]-base_len)
 
-        triangle_cnt = np.array( [pt1, pt2, pt3] )
+    #     triangle_cnt = np.array( [pt1, pt2, pt3] )
 
-        cv2.drawContours(img, [triangle_cnt], 0, (0,0,0), -1)
+    #     cv2.drawContours(img, [triangle_cnt], 0, (0,0,0), -1)
 
-
-
-    '''
-
+    # else:
+    
     # arrow base slope is just negative reciprocal
     arrowhead_base_slpe = -1/tip_slope
 
@@ -271,33 +287,49 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation):
     # not really lag # pixels, since use unique op
     # get location of arrowhead tip point w/ law of sines and similar triangles
     tip_rise = tip_len * math.sin(tip_deg)
-    tip_run = (lag * tip_rise) / tip_slope
+    tip_run = tip_rise / tip_slope
     tip_rise = math.floor(tip_rise)
     tip_run = math.floor(tip_run)
 
     print("tip rise run")
     print(tip_rise)
     print(tip_run)
-    
+
     # get location of arrowhead base points w/ law of sines and similar triangles
     base_rise = base_len * math.sin(base_deg)
-    base_run = (lag * base_rise) / tip_slope
+    base_run = base_rise / tip_slope
     base_rise = math.floor(base_rise)
     base_run = math.floor(base_run)
 
-    pt1 = (tri_source[0]-base_rise, tri_source[1]-base_run)
-    pt2 = (tri_source[0]+tip_run, tri_source[1]-tip_rise)
-    pt3 = (tri_source[0]+base_rise, tri_source[1]+base_run)
+    # TODO:: problem here with pt2 on START & END for UP & DOWN prob has to do w/ sign of slope
+
+    if arrow_orientation == RIGHT:
+        pt1 = (tri_source[0]-base_rise, tri_source[1]-base_run)
+        pt2 = (tri_source[0]+tip_run, tri_source[1]-tip_rise)
+        pt3 = (tri_source[0]+base_rise, tri_source[1]+base_run)
+    elif arrow_orientation == LEFT:
+        pt1 = (tri_source[0]+base_rise, tri_source[1]+base_run)
+        pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
+        pt3 = (tri_source[0]-base_rise, tri_source[1]-base_run)
+    elif arrow_orientation == DOWN:
+        pt1 = (tri_source[0]+base_rise, tri_source[1]+base_run)
+        pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
+        pt3 = (tri_source[0]-base_rise, tri_source[1]-base_run)
+    elif arrow_orientation == UP:
+        pt1 = (tri_source[0]-base_rise, tri_source[1]-base_run)
+        pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
+        pt3 = (tri_source[0]+base_rise, tri_source[1]+base_run)
+
+
 
     triangle_cnt = np.array( [pt1, pt2, pt3] )
 
-    # cv2.drawContours(img, [triangle_cnt], 0, (0,0,0), -1)
+    cv2.drawContours(img, [triangle_cnt], 0, (0,0,0), -1)
 
-    img = cv2.circle(img, pt2, 3, (0,0,255), -1)
+    # img = cv2.circle(img, pt2, 3, (0,0,255), -1)
     # img = cv2.circle(img, pt1, 3, (255,0,0), -1)
     # img = cv2.circle(img, pt3, 3, (255,0,0), -1)
 
-    '''
 
 
     return img
@@ -384,13 +416,11 @@ if __name__ == "__main__":
 
     # Dataset
     x_span = np.array([100, 200, 300, 400])
-    y_span = np.array([100, 80, 80, 100])
-
-    # TODO:: remove orientation code and adjust to be more flexible
+    y_span = np.array([100, 300, 300, 100])
 
     thickness = 1
-    img, f, orientation = draw_spline(img,x_span,y_span,thickness,END)
-    img = draw_arrowhead(img,x_span,y_span,f,END,orientation)
+    img, f, orientation = draw_spline(img,x_span,y_span,thickness,START)
+    img = draw_arrowhead(img,x_span,y_span,f,START,orientation)
 
 
     img = img / 255
