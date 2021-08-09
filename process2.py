@@ -6,6 +6,7 @@ from scipy import interpolate
 import os
 import cv2
 import threading
+from numpy import inf
 import copy
 import math
 import random
@@ -156,9 +157,9 @@ def draw_spline(img,x_span,y_span,thickness,arrow_placement):
     # check if slope of line is too big or too small to rule out
     if comparison_pt is None:
         if arrow_placement == END:
-            comparison_pt = base_points[0]
+            comparison_pt = [x_span[0],y_span[0]]
         else:
-            comparison_pt = base_points[max_idx-1]
+            comparison_pt = [x_span[tmp_len-1],y_span[tmp_len-1]]
 
     x1 = source_point[0]
     x2 = comparison_pt[0]
@@ -192,7 +193,10 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation,tip_l
     # TODO:: fine-tune these thresholds
     print('tip slope')
     print(tip_slope)
-    if math.isnan(tip_slope) or abs(tip_slope) > 10 or abs(tip_slope) < 1:
+
+    print("arrow_orientation")
+    print(arrow_orientation)
+    if math.isnan(tip_slope) or abs(tip_slope) > 10 or abs(tip_slope) < 0.7:
 
         if arrow_orientation == UP:
             pt1 = (tri_source[0]-base_len, tri_source[1])
@@ -249,33 +253,38 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation,tip_l
             base_run = math.floor(base_run)
 
 
-        if arrow_orientation == RIGHT:
-            pt1 = (tri_source[0]-base_rise, tri_source[1]-base_run)
-            pt2 = (tri_source[0]+tip_run, tri_source[1]-tip_rise)
-            pt3 = (tri_source[0]+base_rise, tri_source[1]+base_run)
-        elif arrow_orientation == LEFT:
-            pt1 = (tri_source[0]+base_rise, tri_source[1]+base_run)
-            pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
-            pt3 = (tri_source[0]-base_rise, tri_source[1]-base_run)
-        elif arrow_orientation == DOWN:
+        pt1 = (tri_source[0]-base_run, tri_source[1]+base_rise)
+        pt3 = (tri_source[0]+base_run, tri_source[1]-base_rise)
 
+        if arrow_orientation == RIGHT:
+            pt2 = (tri_source[0]+tip_run, tri_source[1]-tip_rise)
+        elif arrow_orientation == LEFT:
+            pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
+        elif arrow_orientation == DOWN:
             # adjust tip_run & tip_rise for positive or negative slope
             if tip_rise < 0:
                 tip_rise *= -1
                 tip_run *= -1
-            pt1 = (tri_source[0]-base_run, tri_source[1]+base_rise)
             pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
-            pt3 = (tri_source[0]+base_run, tri_source[1]-base_rise)
         elif arrow_orientation == UP:
             # adjust tip_run & tip_rise for positive or negative slope on UP arrow
             # don't have to adjust base_rise & base_run for since pt1 and pt3 just flip
             if tip_rise > 0:
                 tip_rise *= -1
                 tip_run *= -1
-            pt1 = (tri_source[0]-base_run, tri_source[1]+base_rise)
             pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
-            pt3 = (tri_source[0]+base_run, tri_source[1]-base_rise)
 
+        print("arrow_orientation")
+        print(arrow_orientation)
+
+        print("arrowhead_base_slpe")
+        print(arrowhead_base_slpe)
+
+        print('base rise')
+        print(base_rise)
+
+        print('base run')
+        print(base_run)
 
 
         triangle_cnt = np.array( [pt1, pt2, pt3] )
@@ -319,7 +328,7 @@ def test_textbox():
     cv2.imshow("image", img, )
     cv2.waitKey(0)
 
-def draw_textbox(img,label,location):
+def draw_textbox(img,label,location,w,h,text_margin,font_style,font_size):
 
     '''
     return center coordinates of boxes
@@ -329,25 +338,20 @@ def draw_textbox(img,label,location):
 
     color = (30,255,0)
     text_color = (0,0,0)
-    
-    # For the text background
-    # Finds space required by the text so that we can put a background with that amount of width.
-    (w, h), _ = cv2.getTextSize(
-            label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
 
 
     # location is center
-    x1 = location[0] - math.floor(w/2) - 10
-    y1 = location[1] - math.floor(h/2) - 10
+    x1 = location[0] - math.floor(w/2) - text_margin
+    y1 = location[1] - math.floor(h/2) - text_margin
 
     # Prints the text.    
     # to add boarder just do same rectangle but don't fill and can just make it to include optionally
-    img = cv2.rectangle(img, (x1, y1), (x1 + w + 20, y1 + h + 20), color, -1)
-    img = cv2.rectangle(img, (x1, y1), (x1 + w + 20, y1 + h + 20), (0,0,0), 1)
+    img = cv2.rectangle(img, (x1, y1), (x1 + w + (text_margin*2), y1 + h + (text_margin*2)), color, -1)
+    img = cv2.rectangle(img, (x1, y1), (x1 + w + (text_margin*2), y1 + h + (text_margin*2)), (0,0,0), 1)
     # putText takes coordinates of the bottom-left corner of the text string
-    img = cv2.putText(img, label, (x1 + 10, y1 + h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 1)
+    img = cv2.putText(img, label, (x1 + text_margin, y1 + h + text_margin), font_style, font_size, text_color, 1)
 
-    bbox = [[x1,y1],[x1 + w + 20, y1 + h + 20]]
+    bbox = [[x1,y1],[x1 + w + (text_margin*2), y1 + h + (text_margin*2)]]
 
     # img = img / 255
     # cv2.imshow("image", img, )
@@ -381,10 +385,13 @@ def test_relationship():
 
 
 
-def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,entity2_center):
+def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,entity2_center,label1,label2,text1_shape,text2_shape,text_margin,font_style,font_size):
 
-    img, entity1_bbox = draw_textbox(img,"PI3K",entity1_center)
-    img, entity2_bbox = draw_textbox(img,"TOAST",entity2_center)
+    w1,h1 = text1_shape
+    w2,h2 = text2_shape
+
+    img, entity1_bbox = draw_textbox(img,label1,entity1_center,w1,h1,text_margin,font_style,font_size)
+    img, entity2_bbox = draw_textbox(img,label2,entity2_center,w2,h2,text_margin,font_style,font_size)
 
 
     # Dataset
@@ -421,8 +428,8 @@ def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,en
     y_span = spline_points[:,1]
 
     # add noise in better way
-    # x_span[1] = x_span[1] + np.random.randint(0,20,(1,))
-    # y_span[1] = y_span[1] + np.random.randint(0,20,(1,))
+    x_span[1] = x_span[1] + np.random.randint(0,20,(1,))
+    y_span[1] = y_span[1] + np.random.randint(0,20,(1,))
 
     img, f, orientation = draw_spline(img,x_span,y_span,thickness,arrow_pos)
     img = draw_arrowhead(img,x_span,y_span,f,arrow_pos,orientation,tip_len,base_len)
@@ -466,7 +473,7 @@ def check_slice(template_im,slice_shape,x,y,padding):
 
     threshold = 50
 
-    template_slice = template_im[y-padding:y+slice_shape[0]+padding,x-padding:x+slice_shape[1]+padding,:]
+    template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
     # if all pixels are the same, then don't even have to run the rest of check 
     if np.all(template_slice == template_slice[0,0,0]):
@@ -546,57 +553,81 @@ class template_thread(threading.Thread):
 
 
                     
-def place_relationship(img,slice_shape,x_target,y_target):
+def place_relationship(img,slice_shape,x_target,y_target,label1,label2,font_style,font_size):
 
     thickness = 1
     tip_len = 10
     base_len = 10
+    text_margin = 10
     arrow_pos = END
-
-    # TODO:: incorporate text length into this
 
     # select entity centers
     # 4 configurations/positioning: hotdog, hamburger, square1, square2
 
-    # TODO:: reevaluate results with flexible window
+    print("shape")
+    print(slice_shape)
+
+    print('tar')
+    print(x_target)
+    print(y_target)
+
+    # TODO:: allow more flexible placement
+    # TODO:: incorporate text length into this
+
+    # For the text background
+    # Finds space required by the text so that we can put a background with that amount of width.
+    (w1, h1), _ = cv2.getTextSize(label1, font_style, font_size, 1)
+    (w2, h2), _ = cv2.getTextSize(label2, font_style, font_size, 1)
+    text1_shape = [w1,h1]
+    text2_shape = [w2,h2]
 
     # TODO:: add option to add noise
+    # don't think spliting up by 8ths will work
     dim_ratio = slice_shape[0] / slice_shape[1]
-    if dim_ratio > 2:
+    if dim_ratio > 4:
+        print('0')
         # hotdog
         entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
-        entity1_center_x = math.floor(slice_shape[0] / 8) + x_target
+        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - text_margin
 
         entity2_center_y = math.floor(slice_shape[1] / 2) + y_target
-        entity2_center_x = math.floor((slice_shape[0] / 8) * 7) + x_target
-    elif dim_ratio < 0.5:
+        entity2_center_x = x_target + math.floor(w2/2) + text_margin
+    elif dim_ratio < 0.25:
+        print("1")
         # hamburger
         entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
-        entity1_center_y = math.floor(slice_shape[1] / 8) + y_target
+        entity1_center_y = y_target + math.floor(h1/2)+ text_margin
 
         entity2_center_x = math.floor(slice_shape[0] / 2) + x_target
-        entity2_center_y = math.floor((slice_shape[1] / 8) * 7) + y_target
+        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - text_margin
     else:
         # squares
         if np.random.randint(2):
-            entity1_center_x = math.floor(slice_shape[0] / 8) + x_target
-            entity1_center_y = math.floor(slice_shape[1] / 8) + y_target
+            print('2')
+            entity2_center_x = x_target + math.floor(w2/2) + text_margin
+            entity2_center_y = y_target + math.floor(h2/2)+ text_margin
 
-            entity2_center_x = math.floor((slice_shape[0] / 8) * 7) + x_target
-            entity2_center_y = math.floor((slice_shape[1] / 8) * 7) + y_target
+            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - text_margin
+            entity1_center_y = y_target + slice_shape[1] - math.floor(h1/2) - text_margin
         else:
-            entity1_center_x = math.floor((slice_shape[0] / 8) * 7) + x_target
-            entity1_center_y = math.floor((slice_shape[1] / 8) * 7) + y_target
+            print('3')
+            entity1_center_x = x_target + math.floor(w1/2)+ text_margin
+            entity1_center_y = y_target + math.floor(h1/2)+ text_margin
 
-            entity2_center_x = math.floor(slice_shape[0] / 8) + x_target
-            entity2_center_y = math.floor(slice_shape[1] / 8) + y_target
+            entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2) - text_margin
+            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - text_margin
 
     entity1_center = [entity1_center_x,entity1_center_y]
     entity2_center = [entity2_center_x,entity2_center_y]
 
-    # entity1_center = [100,300]
-    # entity2_center = [400,300]
-    img = draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,entity2_center)
+
+
+    print('1 center')
+    print(entity1_center)
+    print('2 center')
+    print(entity2_center)
+
+    img = draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,entity2_center,label1,label2,text1_shape,text2_shape,text_margin,font_style,font_size)
 
     return img
 
@@ -604,7 +635,7 @@ def demo_template():
 
     # TODO:: fix problem with dims and text
 
-    img = np.ones([1500,1500,3])
+    img = np.ones([600,600,3])
     img *= 255
 
     x_dim = np.random.randint(100,500)
@@ -614,10 +645,16 @@ def demo_template():
     padding = 0
 
     # subtracted max bounds to ensure valid coords
-    x_target = np.random.randint(0+padding,img.shape[1]-slice_shape[1]-padding)
-    y_target = np.random.randint(0+padding,img.shape[0]-slice_shape[0]-padding)
+    x_target = np.random.randint(0+padding,img.shape[0]-slice_shape[0]-padding)
+    y_target = np.random.randint(0+padding,img.shape[1]-slice_shape[1]-padding)
 
-    img = place_relationship(img,slice_shape,x_target,y_target)
+    img = cv2.rectangle(img, (x_target, y_target), (x_target + x_dim, y_target + y_dim), (0,0,0), 1)
+
+    label1 = "PI3K"
+    label2 = "TOAST"
+    font_style = cv2.FONT_HERSHEY_SIMPLEX
+    font_size = 0.6
+    img = place_relationship(img,slice_shape,x_target,y_target,label1,label2,font_style,font_size)
 
     cv2.imshow("image", img, )
     cv2.waitKey(0)
@@ -632,6 +669,11 @@ class copy_thread(threading.Thread):
         self.filename = filename
 
     def run(self):
+
+        label1 = "PI3K"
+        label2 = "TOAST"
+        font_style = cv2.FONT_HERSHEY_SIMPLEX
+        font_size = 0.6
 
         # loop through templates
         # read template and get query coords
@@ -659,13 +701,13 @@ class copy_thread(threading.Thread):
                 padding = 0
 
                 # subtracted max bounds to ensure valid coords
-                x_target = np.random.randint(0+padding,template_im.shape[1]-slice_shape[1]-padding)
-                y_target = np.random.randint(0+padding,template_im.shape[0]-slice_shape[0]-padding)
+                x_target = np.random.randint(0+padding,template_im.shape[1]-slice_shape[0]-padding)
+                y_target = np.random.randint(0+padding,template_im.shape[0]-slice_shape[1]-padding)
                 
                 # check if selected template area is good
                 if check_slice(template_im,slice_shape,x_target,y_target,padding):
 
-                    place_relationship(template_im,slice_shape,x_target,y_target)
+                    template_im = place_relationship(template_im,slice_shape,x_target,y_target,label1,label2,font_style,font_size)
 
                     # template_im[y_target:y_target+slice_shape[0],x_target:x_target+slice_shape[1],:] = current_slice
 
@@ -699,5 +741,5 @@ def populate_figures():
 if __name__ == "__main__":
 
 
-    demo_template()
+    populate_figures()
     
