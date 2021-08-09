@@ -184,9 +184,8 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation,tip_l
 
     # img = cv2.circle(img, tuple(tri_source), 3, (40,255,0), -1)
 
-    print('tip_slope')
-    print(tip_slope)
 
+    # TODO:: fine-tune these thresholds
     if abs(tip_slope) > 10 or abs(tip_slope) < 1:
 
         if arrow_orientation == UP:
@@ -208,6 +207,10 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation,tip_l
 
         triangle_cnt = np.array( [pt1, pt2, pt3] )
 
+        print('tri')
+        print(triangle_cnt)
+        print(triangle_cnt.shape)
+
         cv2.drawContours(img, [triangle_cnt], 0, (0,0,0), -1)
 
     else:
@@ -215,20 +218,10 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation,tip_l
         # arrow base slope is just negative reciprocal
         arrowhead_base_slpe = -1/tip_slope
 
-        print("arrowhead_base_slpe")
-        print(arrowhead_base_slpe)
-
         # returned in radians
         # get angle from slope in right triangle drawn by slopes of tip and base
         tip_deg = math.atan(tip_slope)
         base_deg = math.atan(arrowhead_base_slpe)
-
-        print('tip rad')
-        print(math.sin(tip_deg))
-        print('base rad')
-        print(math.sin(base_deg))
-
-
 
         # get location of arrowhead tip point w/ law of sines and similar triangles
         tip_rise = tip_len * math.sin(tip_deg)
@@ -249,18 +242,6 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation,tip_l
             base_rise = math.floor(base_rise)
             base_run = math.floor(base_run)
 
-
-
-        print("tip rise run")
-        print(tip_rise)
-        print(tip_run)
-
-        print("base rise run")
-        print(base_rise)
-        print(base_run)
-
-        print('orientation')
-        print(arrow_orientation)
 
         if arrow_orientation == RIGHT:
             pt1 = (tri_source[0]-base_rise, tri_source[1]-base_run)
@@ -334,6 +315,10 @@ def test_textbox():
 
 def draw_textbox(img,label,location):
 
+    '''
+    return center coordinates of boxes
+    '''
+
     x1,y1 = location
 
     color = (30,255,0)
@@ -348,11 +333,16 @@ def draw_textbox(img,label,location):
     # to add boarder just do same rectangle but don't fill and can just make it to include optionally
     img = cv2.rectangle(img, (x1, y1), (x1 + w + 20, y1 + h + 20), color, -1)
     img = cv2.rectangle(img, (x1, y1), (x1 + w + 20, y1 + h + 20), (0,0,0), 1)
+    # putText takes coordinates of the bottom-left corner of the text string
     img = cv2.putText(img, label, (x1 + 10, y1 + h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 1)
 
+    bbox = [[x1,y1],[x1 + w + 20, y1 + h + 20]]
+
     # img = img / 255
-    cv2.imshow("image", img, )
-    cv2.waitKey(0)
+    # cv2.imshow("image", img, )
+    # cv2.waitKey(0)
+
+    return img, bbox
 
 
 def test_relationship():
@@ -379,58 +369,70 @@ def test_relationship():
     cv2.waitKey(0)
 
 
+
 def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_pos,entity2_pos):
-    
-    draw_textbox(img,"PI3K",entity1_pos)
-    draw_textbox(img,"AKTPxGAMMA",entity2_pos)
+
+    img, entity1_bbox = draw_textbox(img,"PI3K",entity1_pos)
+    img, entity2_bbox = draw_textbox(img,"AKTPxGAMMA",entity2_pos)
+
+    entity1_center_x = math.floor((entity1_bbox[0][0] + entity1_bbox[1][0])/2)
+    entity1_center_y = math.floor((entity1_bbox[0][1] + entity1_bbox[1][1])/2)
+    entity1_center = [entity1_center_x,entity1_center_y]
+
+    entity2_center_x = math.floor((entity2_bbox[0][0] + entity2_bbox[1][0])/2)
+    entity2_center_y = math.floor((entity2_bbox[0][1] + entity2_bbox[1][1])/2)
+    entity2_center = [entity2_center_x,entity2_center_y]
 
     # Dataset
-    # TODO:: set this dynamically based on location of entities
     # TODO:: set up to be several different classes of splines
 
-    # TODO:: first is evenly sampled line
-
-    anchor_points = np.linspace(entity1_pos, entity2_pos, num=4)
+    # set num in linspace to be dependent on distance from one center to another
+    anchor_points = np.linspace(entity1_center, entity2_center, num=50,dtype=np.int)
     print(anchor_points)
-    # x_span = anchor_points[:,0]
-    # y_span = anchor_points[:,1]
-    # # print(tmp_x)
-    # # print(tmp_y)
 
-    # y_span[1] += 30
+    # get start point for spline
+    # check for first nth point outside of entity boxes in direct line to other entity
+    tar_point = 5
+    count = 0
+    start_point = None
+    for idx in range(anchor_points.shape[0]-1):
+        current_point = anchor_points[idx,:]
+        if current_point[0] < entity1_bbox[0][0] or current_point[1] < entity1_bbox[0][1] or current_point[0] > entity1_bbox[1][0] or current_point[1] > entity1_bbox[1][1]:
+                count += 1
+                if count == tar_point:
+                    start_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
-    # print(x_span)
-    # print(y_span)
+    # get end point for spline
+    count = 0
+    end_point = None
+    print(anchor_points.shape)
+    for idx in range(anchor_points.shape[0]-1,0,-1):
+        current_point = anchor_points[idx,:]
+        if current_point[0] < entity2_bbox[0][0] or current_point[1] < entity2_bbox[0][1] or current_point[0] > entity2_bbox[1][0] or current_point[1] > entity2_bbox[1][1]:
+                count += 1
+                if count == tar_point:
+                    end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
-    
+    print('points')
+    print(start_point)
+    print(end_point)
 
-    y_span = np.array([200, 300, 350, 500])
-    x_span = np.array([100, 150, 150, 100])
+    spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
+    x_span = spline_points[:,0]
+    y_span = spline_points[:,1]
 
-    img, f, orientation = draw_spline(img,x_span,y_span,thickness,END)
-    img = draw_arrowhead(img,x_span,y_span,f,END,orientation,tip_len,base_len)
+    # add noise in better way
+    # x_span[1] = x_span[1] + np.random.randint(0,20,(1,))
+    # y_span[1] = y_span[1] + np.random.randint(0,80,(1,))
+
+    img, f, orientation = draw_spline(img,x_span,y_span,thickness,arrow_pos)
+    img = draw_arrowhead(img,x_span,y_span,f,arrow_pos,orientation,tip_len,base_len)
 
     return img
 
 
 if __name__ == "__main__":
 
-    # img = np.ones([500,500,3])
-    # img *= 255
-
-
-    # # Dataset
-    # x_span = np.array([100, 200, 300, 400])
-    # y_span = np.array([100, 150, 150, 100])
-
-    # thickness = 1
-    # img, f, orientation = draw_spline(img,x_span,y_span,thickness,START)
-    # img = draw_arrowhead(img,x_span,y_span,f,START,orientation)
-
-
-    # img = img / 255
-    # cv2.imshow("image", img, )
-    # cv2.waitKey(0)
 
 
     img = np.ones([600,700,3])
@@ -440,41 +442,11 @@ if __name__ == "__main__":
     tip_len = 10
     base_len = 10
     arrow_pos = END
-    entity1_pos = [100,100]
-    entity2_pos = [520,100]
+
+    # TODO:: change this to be specifying the center of the boxes
+    entity1_pos = [300,300]
+    entity2_pos = [100,150]
     img = draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_pos,entity2_pos)
 
     cv2.imshow("image", img, )
     cv2.waitKey(0)
-
-
-
-
-    # img = np.ones([500,500,3])
-    # img *= 255
-    # label = "PCI3"
-    # location = [150,150]
-
-    # draw_textbox(img,label,location)
-
-
-    # test_relationship()
-
-
-
-
-
-    # list1 = np.array([100, 100, 300, 400])
-    # list2 = np.array([100, 80, 80, 100])
-
-    # x = np.array(list1)
-    # y = np.array(list2)
-
-    # param = np.linspace(0, 1, x.size)
-    # # clever way to break it up to avoid 1st param no duplicate error
-    # # make linespace to serve as first param and interpolating the target values which is the set of x & y values
-    # spl = make_interp_spline(param, np.c_[x,y], k=3) #(1)
-    # xnew, y_smooth = spl(np.linspace(0, 1, x.size * 100)).T #(2)
-    # plt.plot(xnew, y_smooth)
-    # plt.scatter(x, y, c="r")
-    # plt.show()
