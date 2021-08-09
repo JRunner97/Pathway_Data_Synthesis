@@ -9,6 +9,7 @@ import threading
 from numpy import inf
 import copy
 import math
+import random, string
 import random
 from scipy import stats
 
@@ -26,6 +27,10 @@ UP = 0
 DOWN = 1
 LEFT = 2
 RIGHT = 3
+
+def randomword(length):
+   letters = string.ascii_lowercase
+   return ''.join(random.choice(letters) for i in range(length))
 
 def test_it():
 
@@ -670,8 +675,6 @@ class copy_thread(threading.Thread):
 
     def run(self):
 
-        label1 = "PI3K"
-        label2 = "TOAST"
         font_style = cv2.FONT_HERSHEY_SIMPLEX
         font_size = 0.6
 
@@ -689,6 +692,11 @@ class copy_thread(threading.Thread):
         shapes = []
         # for relation_idx in range(30):
         for relation_idx in range(30):
+
+            tmp_str_len = random.randint(3,7)
+            label1 = randomword(tmp_str_len).upper()
+            tmp_str_len = random.randint(3,7)
+            label2 = randomword(tmp_str_len).upper()
 
             # TODO:: set y_dim params based on x_dim value
             x_dim = np.random.randint(100,500)
