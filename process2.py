@@ -3,9 +3,13 @@ from numpy.lib.npyio import save
 from scipy.interpolate import make_interp_spline
 import matplotlib.pyplot as plt
 from scipy import interpolate
+import os
 import cv2
+import threading
 import copy
 import math
+import random
+from scipy import stats
 
 from scipy.sparse import base
  
@@ -186,7 +190,9 @@ def draw_arrowhead(img,x_span,y_span,tip_slope,arrow_pos,arrow_orientation,tip_l
 
 
     # TODO:: fine-tune these thresholds
-    if abs(tip_slope) > 10 or abs(tip_slope) < 1:
+    print('tip slope')
+    print(tip_slope)
+    if math.isnan(tip_slope) or abs(tip_slope) > 10 or abs(tip_slope) < 1:
 
         if arrow_orientation == UP:
             pt1 = (tri_source[0]-base_len, tri_source[1])
@@ -319,7 +325,7 @@ def draw_textbox(img,label,location):
     return center coordinates of boxes
     '''
 
-    x1,y1 = location
+    
 
     color = (30,255,0)
     text_color = (0,0,0)
@@ -328,6 +334,11 @@ def draw_textbox(img,label,location):
     # Finds space required by the text so that we can put a background with that amount of width.
     (w, h), _ = cv2.getTextSize(
             label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+
+
+    # location is center
+    x1 = location[0] - math.floor(w/2) - 10
+    y1 = location[1] - math.floor(h/2) - 10
 
     # Prints the text.    
     # to add boarder just do same rectangle but don't fill and can just make it to include optionally
@@ -370,25 +381,17 @@ def test_relationship():
 
 
 
-def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_pos,entity2_pos):
+def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,entity2_center):
 
-    img, entity1_bbox = draw_textbox(img,"PI3K",entity1_pos)
-    img, entity2_bbox = draw_textbox(img,"AKTPxGAMMA",entity2_pos)
+    img, entity1_bbox = draw_textbox(img,"PI3K",entity1_center)
+    img, entity2_bbox = draw_textbox(img,"TOAST",entity2_center)
 
-    entity1_center_x = math.floor((entity1_bbox[0][0] + entity1_bbox[1][0])/2)
-    entity1_center_y = math.floor((entity1_bbox[0][1] + entity1_bbox[1][1])/2)
-    entity1_center = [entity1_center_x,entity1_center_y]
-
-    entity2_center_x = math.floor((entity2_bbox[0][0] + entity2_bbox[1][0])/2)
-    entity2_center_y = math.floor((entity2_bbox[0][1] + entity2_bbox[1][1])/2)
-    entity2_center = [entity2_center_x,entity2_center_y]
 
     # Dataset
     # TODO:: set up to be several different classes of splines
 
     # set num in linspace to be dependent on distance from one center to another
     anchor_points = np.linspace(entity1_center, entity2_center, num=50,dtype=np.int)
-    print(anchor_points)
 
     # get start point for spline
     # check for first nth point outside of entity boxes in direct line to other entity
@@ -405,7 +408,6 @@ def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_pos,entit
     # get end point for spline
     count = 0
     end_point = None
-    print(anchor_points.shape)
     for idx in range(anchor_points.shape[0]-1,0,-1):
         current_point = anchor_points[idx,:]
         if current_point[0] < entity2_bbox[0][0] or current_point[1] < entity2_bbox[0][1] or current_point[0] > entity2_bbox[1][0] or current_point[1] > entity2_bbox[1][1]:
@@ -413,9 +415,6 @@ def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_pos,entit
                 if count == tar_point:
                     end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
-    print('points')
-    print(start_point)
-    print(end_point)
 
     spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
     x_span = spline_points[:,0]
@@ -423,17 +422,14 @@ def draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_pos,entit
 
     # add noise in better way
     # x_span[1] = x_span[1] + np.random.randint(0,20,(1,))
-    # y_span[1] = y_span[1] + np.random.randint(0,80,(1,))
+    # y_span[1] = y_span[1] + np.random.randint(0,20,(1,))
 
     img, f, orientation = draw_spline(img,x_span,y_span,thickness,arrow_pos)
     img = draw_arrowhead(img,x_span,y_span,f,arrow_pos,orientation,tip_len,base_len)
 
     return img
 
-
-if __name__ == "__main__":
-
-
+def demo_relationship():
 
     img = np.ones([600,700,3])
     img *= 255
@@ -443,10 +439,265 @@ if __name__ == "__main__":
     base_len = 10
     arrow_pos = END
 
-    # TODO:: change this to be specifying the center of the boxes
-    entity1_pos = [300,300]
-    entity2_pos = [100,150]
-    img = draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_pos,entity2_pos)
+    entity1_center = [100,300]
+    entity2_center = [400,300]
+    img = draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,entity2_center)
 
     cv2.imshow("image", img, )
     cv2.waitKey(0)
+
+
+def radial_profile(data, center):
+    y, x = np.indices((data.shape))
+    r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+    r = r.astype(np.int)
+
+    # sum over pixels the same radius away from center
+    tbin = np.bincount(r.ravel(), data.ravel())
+
+    # normalize by distance to center, since as radius grows the # of pixels in radius bin does also
+    nr = np.bincount(r.ravel())
+    radialprofile = tbin / nr
+    return radialprofile 
+
+
+# x,y now define a center
+def check_slice(template_im,slice_shape,x,y,padding):
+
+    threshold = 50
+
+    template_slice = template_im[y-padding:y+slice_shape[0]+padding,x-padding:x+slice_shape[1]+padding,:]
+
+    # if all pixels are the same, then don't even have to run the rest of check 
+    if np.all(template_slice == template_slice[0,0,0]):
+        return True
+
+    grey_slice = cv2.cvtColor(template_slice, cv2.COLOR_BGR2GRAY)
+    f = np.fft.fft2(grey_slice)
+    fshift = np.fft.fftshift(f)
+    magnitude_spectrum = 20*np.log(np.abs(fshift))
+
+    # x,y format
+    center = (int(slice_shape[1] / 2),int(slice_shape[0] / 2))
+
+    # get description of fft emitting from center
+    radial_prof = radial_profile(magnitude_spectrum, center)
+
+    radial_prof[radial_prof == -inf] = 0
+
+    idx = range(0,radial_prof.shape[0])
+    bin_means = stats.binned_statistic(idx, radial_prof, 'mean', bins=4)[0]
+    
+    if bin_means[-1] < threshold and bin_means[-2] < threshold:
+        return True
+    else:
+        return False
+
+
+class template_thread(threading.Thread):
+    def __init__(self, threadID,name,template_list,directory):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.template_list = template_list
+        self.directory = directory
+
+    def run(self):
+
+        filename = self.template_list[self.threadID]
+        
+        # how many images per template
+        stop_child_flag = False
+        num_copies = 8
+        for copy_idx in range(num_copies):
+
+            copy_idx *= 4
+            copy_idx = self.threadID*num_copies + copy_idx
+
+            if stop_child_flag:
+                break
+
+            child_thread0 = copy_thread(copy_idx,"child0",self.directory,filename)
+            child_thread1 = copy_thread(copy_idx+1,"child1",self.directory,filename)
+            child_thread2 = copy_thread(copy_idx+2,"child2",self.directory,filename)
+            child_thread3 = copy_thread(copy_idx+3,"child3",self.directory,filename)
+
+            child_thread0.start()
+            if copy_idx + 1 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread1.start()
+            if copy_idx + 2 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread2.start()
+            if copy_idx + 3 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread3.start()
+
+            child_thread0.join()
+            child_thread1.join()
+            child_thread2.join()
+            child_thread3.join()
+
+
+                    
+def place_relationship(img,slice_shape,x_target,y_target):
+
+    thickness = 1
+    tip_len = 10
+    base_len = 10
+    arrow_pos = END
+
+    # TODO:: incorporate text length into this
+
+    # select entity centers
+    # 4 configurations/positioning: hotdog, hamburger, square1, square2
+
+    # TODO:: reevaluate results with flexible window
+
+    # TODO:: add option to add noise
+    dim_ratio = slice_shape[0] / slice_shape[1]
+    if dim_ratio > 2:
+        # hotdog
+        entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
+        entity1_center_x = math.floor(slice_shape[0] / 8) + x_target
+
+        entity2_center_y = math.floor(slice_shape[1] / 2) + y_target
+        entity2_center_x = math.floor((slice_shape[0] / 8) * 7) + x_target
+    elif dim_ratio < 0.5:
+        # hamburger
+        entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
+        entity1_center_y = math.floor(slice_shape[1] / 8) + y_target
+
+        entity2_center_x = math.floor(slice_shape[0] / 2) + x_target
+        entity2_center_y = math.floor((slice_shape[1] / 8) * 7) + y_target
+    else:
+        # squares
+        if np.random.randint(2):
+            entity1_center_x = math.floor(slice_shape[0] / 8) + x_target
+            entity1_center_y = math.floor(slice_shape[1] / 8) + y_target
+
+            entity2_center_x = math.floor((slice_shape[0] / 8) * 7) + x_target
+            entity2_center_y = math.floor((slice_shape[1] / 8) * 7) + y_target
+        else:
+            entity1_center_x = math.floor((slice_shape[0] / 8) * 7) + x_target
+            entity1_center_y = math.floor((slice_shape[1] / 8) * 7) + y_target
+
+            entity2_center_x = math.floor(slice_shape[0] / 8) + x_target
+            entity2_center_y = math.floor(slice_shape[1] / 8) + y_target
+
+    entity1_center = [entity1_center_x,entity1_center_y]
+    entity2_center = [entity2_center_x,entity2_center_y]
+
+    # entity1_center = [100,300]
+    # entity2_center = [400,300]
+    img = draw_relationship(img,thickness,tip_len,base_len,arrow_pos,entity1_center,entity2_center)
+
+    return img
+
+def demo_template():
+
+    # TODO:: fix problem with dims and text
+
+    img = np.ones([1500,1500,3])
+    img *= 255
+
+    x_dim = np.random.randint(100,500)
+    y_dim = np.random.randint(100,500)
+    slice_shape = [x_dim,y_dim]
+
+    padding = 0
+
+    # subtracted max bounds to ensure valid coords
+    x_target = np.random.randint(0+padding,img.shape[1]-slice_shape[1]-padding)
+    y_target = np.random.randint(0+padding,img.shape[0]-slice_shape[0]-padding)
+
+    img = place_relationship(img,slice_shape,x_target,y_target)
+
+    cv2.imshow("image", img, )
+    cv2.waitKey(0)
+
+
+class copy_thread(threading.Thread):
+    def __init__(self,copyID,name,directory,filename):
+        threading.Thread.__init__(self)
+        self.copyID = copyID
+        self.name = name
+        self.directory = directory
+        self.filename = filename
+
+    def run(self):
+
+        # loop through templates
+        # read template and get query coords
+        template_im = cv2.imread(os.path.join(self.directory, self.filename))
+        
+        # TODO this doesn't have to be repeated
+        tmp_template_im = np.reshape(template_im,(-1,3))
+        template_mode_pix = stats.mode(tmp_template_im)[0]
+
+
+        # put relations on template and generate annotation
+        element_indx = 0
+        shapes = []
+        # for relation_idx in range(30):
+        for relation_idx in range(30):
+
+            # TODO:: set y_dim params based on x_dim value
+            x_dim = np.random.randint(100,500)
+            y_dim = np.random.randint(100,500)
+            slice_shape = [x_dim,y_dim]
+
+            # check if queried coords are a valid location
+            for idx in range(50):
+
+                padding = 0
+
+                # subtracted max bounds to ensure valid coords
+                x_target = np.random.randint(0+padding,template_im.shape[1]-slice_shape[1]-padding)
+                y_target = np.random.randint(0+padding,template_im.shape[0]-slice_shape[0]-padding)
+                
+                # check if selected template area is good
+                if check_slice(template_im,slice_shape,x_target,y_target,padding):
+
+                    place_relationship(template_im,slice_shape,x_target,y_target)
+
+                    # template_im[y_target:y_target+slice_shape[0],x_target:x_target+slice_shape[1],:] = current_slice
+
+                    break
+
+
+        # save json and new image
+        im_dir = "output_test"
+        image_path = str(self.copyID) + ".png"
+        cv2.imwrite(os.path.join(im_dir, image_path), template_im)
+
+
+
+
+
+
+def populate_figures():
+
+    # loop through all templates
+    directory = "templates"
+    template_list = os.listdir(directory)
+    # TODO:: make this more clean
+    for template_idx in range(len(template_list)):
+
+        thread0 = template_thread(template_idx,"thread-0",template_list,directory)
+        thread0.start()
+        thread0.join()
+
+
+
+if __name__ == "__main__":
+
+
+    demo_template()
+    
