@@ -15,8 +15,6 @@ from argparse import Namespace
 from scipy import stats
 
 from scipy.sparse import base
- 
-# change thickness of line by adding 1 to knew set
 
 X_ORIENTATION = 0
 Y_ORIENTATION = 1
@@ -117,6 +115,16 @@ def draw_spline(self,img,x_span,y_span):
     base_points = np.stack((X_,Y_)).T
     base_points = np.unique(base_points, axis=0)
 
+    base_points_x = base_points[:,0]
+    min_x = np.min(base_points_x)
+    max_x = np.max(base_points_x)
+
+    base_points_y = base_points[:,1]
+    min_y = np.min(base_points_y)
+    max_y = np.max(base_points_y)
+
+    spline_bbox = [[min_x,min_y],[max_x,max_y]]
+
     # draw spline
     for x,y in base_points:
         img = cv2.circle(img, (x,y), self.thickness, self.arrow_color, -1)  
@@ -131,7 +139,7 @@ def draw_spline(self,img,x_span,y_span):
     f, comparison_pt = get_slope(self,base_points,source_point,x_span,y_span)
     orientation = check_orientation(source_point,comparison_pt)
 
-    return img, f, orientation
+    return img, f, orientation, spline_bbox
 
 
 def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
@@ -224,7 +232,15 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
         cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
 
-    return img
+    min_x = min([pt1[0],pt2[0],pt3[0]])
+    min_y = min([pt1[1],pt2[1],pt3[1]])
+
+    max_x = max([pt1[0],pt2[0],pt3[0]])
+    max_y = max([pt1[1],pt2[1],pt3[1]])
+
+    arrowhead_bbox = [[min_x,min_y],[max_x,max_y]]
+
+    return img, arrowhead_bbox
 
 
 def draw_textbox(self,img,label,location,w,h):
@@ -302,10 +318,17 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     # x_span[1] = x_span[1] + np.random.randint(0,20,(1,))
     # y_span[1] = y_span[1] + np.random.randint(0,20,(1,))
 
-    img, f, orientation = draw_spline(self,img,x_span,y_span)
-    img = draw_arrowhead(self,img,x_span,y_span,f,orientation)
+    img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
+    img, arrowhead_bbox = draw_arrowhead(self,img,x_span,y_span,f,orientation)
 
-    return img
+    min_x = min([spline_bbox[0][0],arrowhead_bbox[0][0]])
+    min_y = min([spline_bbox[0][1],arrowhead_bbox[0][1]])
+    max_x = max([spline_bbox[1][0],arrowhead_bbox[1][0]])
+    max_y = max([spline_bbox[1][1],arrowhead_bbox[1][1]])
+
+    relationship_bbox = [[min_x,min_y],[max_x,max_y]]
+
+    return img,relationship_bbox
 
 def radial_profile(data, center):
     y, x = np.indices((data.shape))
@@ -369,31 +392,33 @@ class template_thread(threading.Thread):
         # how many images per template
         stop_child_flag = False
         num_copies = 8
-        for copy_idx in range(num_copies):
+        for copy_idx in range(0,num_copies):
 
-            copy_idx *= 4
-            copy_idx = self.threadID*num_copies + copy_idx
+            # children in here
+            child_thread_idx = copy_idx * 4
+            # other parent threads
+            child_thread_idx = self.threadID*num_copies + child_thread_idx
 
             if stop_child_flag:
                 break
 
-            child_thread0 = copy_thread(copy_idx,"child0",self.directory,filename)
-            child_thread1 = copy_thread(copy_idx+1,"child1",self.directory,filename)
-            child_thread2 = copy_thread(copy_idx+2,"child2",self.directory,filename)
-            child_thread3 = copy_thread(copy_idx+3,"child3",self.directory,filename)
+            child_thread0 = copy_thread(child_thread_idx,"child0",self.directory,filename)
+            child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
+            child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
+            child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
 
             child_thread0.start()
-            if copy_idx + 1 > num_copies:
+            if (copy_idx*4) + 1 > num_copies:
                 stop_child_flag = True
                 continue
             else:
                 child_thread1.start()
-            if copy_idx + 2 > num_copies:
+            if (copy_idx*4) + 2 > num_copies:
                 stop_child_flag = True
                 continue
             else:
                 child_thread2.start()
-            if copy_idx + 3 > num_copies:
+            if (copy_idx*4) + 3 > num_copies:
                 stop_child_flag = True
                 continue
             else:
@@ -492,6 +517,9 @@ class copy_thread(threading.Thread):
         # read template and get query coords
         template_im = cv2.imread(os.path.join(self.directory, self.filename))
 
+        # put relations on template and generate annotation
+        element_indx = 0
+        shapes = []
         for relation_idx in range(30):
 
             # TODO:: make set of names to pull from or characters
@@ -509,7 +537,6 @@ class copy_thread(threading.Thread):
             # check if queried coords are a valid location
             for idx in range(50):
 
-
                 # subtracted max bounds to ensure valid coords
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
                 y_target = np.random.randint(0+self.padding,template_im.shape[0]-slice_shape[1]-self.padding)
@@ -518,34 +545,74 @@ class copy_thread(threading.Thread):
                 if check_slice(template_im,slice_shape,x_target,y_target,self.padding):
 
                     entity1_center,entity2_center,text1_shape,text2_shape = place_entities(self,slice_shape,x_target,y_target,label1,label2)
-                    template_im = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2)
+
+                    # relationship bbox is xy,xy and anno bboxes need yx,yx,yx,yx
+                    template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2)
+
+                    # TODO:: change this to round
+                    label1_x1 = math.floor(entity1_center[0] - (text1_shape[0]/2))
+                    label1_y1 = math.floor(entity1_center[1] - (text1_shape[1]/2))
+                    label1_x2 = math.floor(entity1_center[0] + (text1_shape[0]/2))
+                    label1_y2 = math.floor(entity1_center[1] + (text1_shape[1]/2))
+                    label1_bbox = [[label1_y1,label1_x1],[label1_y1,label1_x2],[label1_y2,label1_x2],[label1_y2,label1_x1]]
+
+                    label2_x1 = math.floor(entity2_center[0] - (text2_shape[0]/2))
+                    label2_y1 = math.floor(entity2_center[1] - (text2_shape[1]/2))
+                    label2_x2 = math.floor(entity2_center[0] + (text2_shape[0]/2))
+                    label2_y2 = math.floor(entity2_center[1] + (text2_shape[1]/2))
+                    label2_bbox = [[label2_y1,label2_x1],[label2_y1,label2_x2],[label2_y2,label2_x2],[label2_y2,label2_x1]]
+
+
 
                     break
-
 
         # save json and new image
         im_dir = "output_test"
         image_path = str(self.copyID) + ".png"
         cv2.imwrite(os.path.join(im_dir, image_path), template_im)
 
-
-# TODO:: problem with saved image file name from index
-
 def populate_figures():
 
     # loop through all templates
+    stop_flag = False
     directory = "templates"
     template_list = os.listdir(directory)
     # TODO:: make this more clean
-    for template_idx in range(len(template_list)):
+    for template_idx in range(0,len(template_list)-1,4):
+
+        if stop_flag:
+            break
 
         thread0 = template_thread(template_idx,"thread-0",template_list,directory)
+        thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
+        thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
+        thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
+
         thread0.start()
+        if template_idx + 1 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread1.start()
+        if template_idx + 2 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread2.start()
+        if template_idx + 3 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread3.start()
+
         thread0.join()
-
-
+        thread1.join()
+        thread2.join()
+        thread3.join()
 
 if __name__ == "__main__":
+
+    # TODO:: include annotation 
 
 
     # another interesting idea would be to include targeted noise (i.e. lines with no indicator connecting no entities)
