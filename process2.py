@@ -4,6 +4,7 @@ from scipy.interpolate import make_interp_spline
 import matplotlib.pyplot as plt
 from scipy import interpolate
 import os
+import label_file
 import cv2
 import threading
 from numpy import inf
@@ -26,6 +27,9 @@ UP = 0
 DOWN = 1
 LEFT = 2
 RIGHT = 3
+
+INHIBIT = 0
+ACTIVATE = 1
 
 def randomword(length):
    letters = string.ascii_lowercase
@@ -100,7 +104,6 @@ def draw_spline(self,img,x_span,y_span):
         returns updated image, slope of spline at interested end, and orientation at interested end
     '''
 
-
     # get full spline (base_points) from anchor points (x_span,y_span)
     param = np.linspace(0, 1, x_span.size)
     # clever way to break it up to avoid 1st param no duplicate error
@@ -173,9 +176,12 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
             pt2 = (tri_source[0]+self.tip_len, tri_source[1])
             pt3 = (tri_source[0], tri_source[1]-self.base_len)
 
-        triangle_cnt = np.array( [pt1, pt2, pt3] )
-
-        cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
+        if self.indicator == INHIBIT:
+            triangle_cnt = np.array( [pt1, pt3] )
+            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.inhibit_tickness)
+        else:
+            triangle_cnt = np.array( [pt1, pt2, pt3] )
+            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
 
     else:
 
@@ -228,15 +234,25 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
                 tip_run *= -1
             pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
 
-        triangle_cnt = np.array( [pt1, pt2, pt3] )
+        if self.indicator == INHIBIT:
+            triangle_cnt = np.array( [pt1, pt3] )
+            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.inhibit_tickness)
+        else:
+            triangle_cnt = np.array( [pt1, pt2, pt3] )
+            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
 
-        cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
+    if self.indicator == INHIBIT:
+        min_x = min([pt1[0],pt3[0]]) - self.inhibit_tickness
+        min_y = min([pt1[1],pt3[1]]) - self.inhibit_tickness
 
-    min_x = min([pt1[0],pt2[0],pt3[0]])
-    min_y = min([pt1[1],pt2[1],pt3[1]])
+        max_x = max([pt1[0],pt3[0]]) + self.inhibit_tickness
+        max_y = max([pt1[1],pt3[1]]) + self.inhibit_tickness
+    else:
+        min_x = min([pt1[0],pt2[0],pt3[0]])
+        min_y = min([pt1[1],pt2[1],pt3[1]])
 
-    max_x = max([pt1[0],pt2[0],pt3[0]])
-    max_y = max([pt1[1],pt2[1],pt3[1]])
+        max_x = max([pt1[0],pt2[0],pt3[0]])
+        max_y = max([pt1[1],pt2[1],pt3[1]])
 
     arrowhead_bbox = [[min_x,min_y],[max_x,max_y]]
 
@@ -321,12 +337,12 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
     img, arrowhead_bbox = draw_arrowhead(self,img,x_span,y_span,f,orientation)
 
-    min_x = min([spline_bbox[0][0],arrowhead_bbox[0][0]])
-    min_y = min([spline_bbox[0][1],arrowhead_bbox[0][1]])
-    max_x = max([spline_bbox[1][0],arrowhead_bbox[1][0]])
-    max_y = max([spline_bbox[1][1],arrowhead_bbox[1][1]])
+    min_x = int(min([spline_bbox[0][0],arrowhead_bbox[0][0]]))
+    min_y = int(min([spline_bbox[0][1],arrowhead_bbox[0][1]]))
+    max_x = int(max([spline_bbox[1][0],arrowhead_bbox[1][0]]))
+    max_y = int(max([spline_bbox[1][1],arrowhead_bbox[1][1]]))
 
-    relationship_bbox = [[min_x,min_y],[max_x,max_y]]
+    relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
     return img,relationship_bbox
 
@@ -508,10 +524,12 @@ class copy_thread(threading.Thread):
         self.text_margin = 10
         self.arrow_placement = END
         self.arrow_color = (120,120,0)
-        self.textbox_background = (30,255,0)
+        self.textbox_background = (255,30,0)
         self.textbox_border_thickness = 1
         self.text_color = (0,0,0)
         self.text_thickness = 1
+        self.indicator = INHIBIT
+        self.inhibit_tickness = 2
 
         # loop through templates
         # read template and get query coords
@@ -520,6 +538,18 @@ class copy_thread(threading.Thread):
         # put relations on template and generate annotation
         element_indx = 0
         shapes = []
+        base_shape = {
+            "line_color": None,
+            "fill_color": None,
+            "component": [],
+            "rotated_box": [],
+            "ID": None,
+            "label": None,
+            "points": [],
+            "group_id": None,
+            "shape_type": "polygon",
+            "flags": {}
+        }
         for relation_idx in range(30):
 
             # TODO:: make set of names to pull from or characters
@@ -534,8 +564,14 @@ class copy_thread(threading.Thread):
             y_dim = np.random.randint(100,500)
             slice_shape = [x_dim,y_dim]
 
+            # randomly select indicator head
+            if np.random.randint(2):
+                self.indicator = INHIBIT
+            else:
+                self.indicator = ACTIVATE
+
             # check if queried coords are a valid location
-            for idx in range(50):
+            for idx in range(100):
 
                 # subtracted max bounds to ensure valid coords
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
@@ -552,16 +588,40 @@ class copy_thread(threading.Thread):
                     # TODO:: change this to round
                     label1_x1 = math.floor(entity1_center[0] - (text1_shape[0]/2))
                     label1_y1 = math.floor(entity1_center[1] - (text1_shape[1]/2))
-                    label1_x2 = math.floor(entity1_center[0] + (text1_shape[0]/2))
-                    label1_y2 = math.floor(entity1_center[1] + (text1_shape[1]/2))
-                    label1_bbox = [[label1_y1,label1_x1],[label1_y1,label1_x2],[label1_y2,label1_x2],[label1_y2,label1_x1]]
+                    label1_x2 = math.ceil(entity1_center[0] + (text1_shape[0]/2))
+                    label1_y2 = math.ceil(entity1_center[1] + (text1_shape[1]/2))
+                    label1_bbox = [[label1_x1,label1_y1],[label1_x2,label1_y1],[label1_x2,label1_y2],[label1_x1,label1_y2]]
 
                     label2_x1 = math.floor(entity2_center[0] - (text2_shape[0]/2))
                     label2_y1 = math.floor(entity2_center[1] - (text2_shape[1]/2))
-                    label2_x2 = math.floor(entity2_center[0] + (text2_shape[0]/2))
-                    label2_y2 = math.floor(entity2_center[1] + (text2_shape[1]/2))
-                    label2_bbox = [[label2_y1,label2_x1],[label2_y1,label2_x2],[label2_y2,label2_x2],[label2_y2,label2_x1]]
+                    label2_x2 = math.ceil(entity2_center[0] + (text2_shape[0]/2))
+                    label2_y2 = math.ceil(entity2_center[1] + (text2_shape[1]/2))
+                    label2_bbox = [[label2_x1,label2_y1],[label2_x2,label2_y1],[label2_x2,label2_y2],[label2_x1,label2_y2]]
 
+                    label1_shape = copy.deepcopy(base_shape)
+                    label1_shape['points'] = label1_bbox
+                    label1_shape['ID'] = element_indx
+                    label1_shape['label'] = str(element_indx) + ":gene:" + label1
+                    element_indx += 1
+
+                    label2_shape = copy.deepcopy(base_shape)
+                    label2_shape['points'] = label2_bbox
+                    label2_shape['ID'] = element_indx
+                    label2_shape['label'] = str(element_indx) + ":gene:" + label2
+                    element_indx += 1
+
+                    # TODO:: change indicator label based on arrow or t-bar
+                    # TODO:: change order label1 and label2 based on arrow pos
+                    indicator_shape = copy.deepcopy(base_shape)
+                    indicator_shape['points'] = relationship_bbox
+                    indicator_shape['ID'] = element_indx
+                    indicator_shape['label'] = str(element_indx) + ":activate:" + str(label1_shape['ID']) + "|" + str(label2_shape['ID'])
+                    element_indx += 1
+
+
+                    shapes.append(label1_shape)
+                    shapes.append(label2_shape)
+                    shapes.append(indicator_shape)
 
 
                     break
@@ -570,6 +630,10 @@ class copy_thread(threading.Thread):
         im_dir = "output_test"
         image_path = str(self.copyID) + ".png"
         cv2.imwrite(os.path.join(im_dir, image_path), template_im)
+        imageHeight = template_im.shape[0]
+        imageWidth = template_im.shape[1]
+        template_label_file = label_file.LabelFile()
+        template_label_file.save(os.path.join(im_dir,str(self.copyID) + ".json"),shapes,image_path,imageHeight,imageWidth)
 
 def populate_figures():
 
