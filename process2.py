@@ -37,7 +37,21 @@ def randomword(length):
 
 def check_orientation(source_point,comparison_pt):
 
+    '''
+
+        get prevailing cardinal direction of spline at interested end
+
+        Args:
+            source_point (list): last point on interested end of spline used as reference as [x,y]
+            comparison_pt (list): spline point used as reference for deterimining slope [x,y]
+        
+        Return:
+            orientation (int): prevailing cardinal direction of spline at interested end
+            
+    '''
+
     # check orientation
+    # look at prevailing dimension of change
     if abs(source_point[0] - comparison_pt[0]) > abs(source_point[1] - comparison_pt[1]):
         # LEFT or RIGHT
         if source_point[0] - comparison_pt[0] > 0:
@@ -56,7 +70,20 @@ def check_orientation(source_point,comparison_pt):
 def get_slope(self,base_points,source_point,x_span,y_span):
 
     '''
-        get slope of spline at interested end
+
+        draws spline between entities
+
+        Args:
+            self: contains hyperparameter config
+            base_points (np.Array): 2-D numpy array of spline unique pixel coordinates
+            source_point (list): last point on interested end of spline used as reference as [x,y]
+            x_span (np.Array): x-dim anchor points for spline
+            y_span (np.Array): y-dim anchor points for spline
+        
+        Return:
+            f (float): slope of spline at interested end
+            comparison_pt (list): spline point used as reference for deterimining slope [x,y]
+            
     '''
 
     # select distinct and nth closest
@@ -158,7 +185,25 @@ def draw_spline(self,img,x_span,y_span):
     return img, f, orientation, spline_bbox
 
 
-def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
+def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
+
+    '''
+
+        draw indicator
+
+        Args:
+            self: contains hyperparameter config
+            img (np.Array): copied template image for stitching
+            x_span (np.Array): x-dim anchor points for spline
+            y_span (np.Array): y-dim anchor points for spline
+            tip_slope (float): slope of spline at interested end
+            arrow_orientation (int): prevailing cardinal direction of spline at interested end   
+        
+        Return:
+            img (np.Array): updated image with indicator drawn on it
+            indicator_bbox (list): 2D-list with bbox corners for indicator as [[x,y],[x,y]]
+            
+    '''
 
     # get reference point
     if self.arrow_placement == END:
@@ -170,6 +215,7 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
 
     # TODO:: fine-tune these thresholds
+    # if slope is extreme, then just place simple inicator in cardinal direction
     if math.isnan(tip_slope) or abs(tip_slope) > 10 or abs(tip_slope) < 0.5:
 
         if arrow_orientation == UP:
@@ -196,6 +242,7 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
             triangle_cnt = np.array( [pt1, pt2, pt3] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
 
+    # if slope is 'soft', then calculate appropriate indicator orientation
     else:
 
         # arrow base slope is just negative reciprocal
@@ -254,6 +301,7 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
             triangle_cnt = np.array( [pt1, pt2, pt3] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
 
+    # get bbox dims for corresponding indicator
     if self.indicator == INHIBIT:
         min_x = min([pt1[0],pt3[0]]) - self.inhibit_tickness
         min_y = min([pt1[1],pt3[1]]) - self.inhibit_tickness
@@ -267,9 +315,9 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
         max_x = max([pt1[0],pt2[0],pt3[0]])
         max_y = max([pt1[1],pt2[1],pt3[1]])
 
-    arrowhead_bbox = [[min_x,min_y],[max_x,max_y]]
+    indicator_bbox = [[min_x,min_y],[max_x,max_y]]
 
-    return img, arrowhead_bbox
+    return img, indicator_bbox
 
 
 def draw_textbox(self,img,label,location,w,h):
@@ -380,12 +428,13 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     # y_span[2] = y_span[2] + y_noise
 
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
-    img, arrowhead_bbox = draw_arrowhead(self,img,x_span,y_span,f,orientation)
+    img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
 
-    min_x = int(min([spline_bbox[0][0],arrowhead_bbox[0][0]]))
-    min_y = int(min([spline_bbox[0][1],arrowhead_bbox[0][1]]))
-    max_x = int(max([spline_bbox[1][0],arrowhead_bbox[1][0]]))
-    max_y = int(max([spline_bbox[1][1],arrowhead_bbox[1][1]]))
+    # get final relationship bbox by taking max dims of spline and indicator
+    min_x = int(min([spline_bbox[0][0],indicator_bbox[0][0]]))
+    min_y = int(min([spline_bbox[0][1],indicator_bbox[0][1]]))
+    max_x = int(max([spline_bbox[1][0],indicator_bbox[1][0]]))
+    max_y = int(max([spline_bbox[1][1],indicator_bbox[1][1]]))
 
     relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
