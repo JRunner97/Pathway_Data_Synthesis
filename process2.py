@@ -356,6 +356,71 @@ def draw_textbox(self,img,label,location,w,h):
 
     return img, bbox
 
+def get_spline_anchors(entity1_center,entity2_center,entity1_bbox,entity2_bbox):
+
+    '''
+
+        draw entities, draw spline, draw indicator
+
+        Args:
+            self: contains hyperparameter config
+            img (np.Array): copied template image for stitching
+            entity1_center (list): contains target center of entity1 bbox as [entity1_center_x,entity1_center_y]
+            entity2_center (list): contains target center of entity2 bbox as [entity2_center_x,entity2_center_y]  
+            entity1_bbox (list): 2D-list with entity1 bbox corners as [[x,y],[x,y]]
+            entity2_bbox (list): 2D-list with entity2 bbox corners as [[x,y],[x,y]]
+        
+        Return:
+            x_span (np.Array): x-dim anchor points for spline
+            y_span (np.Array): y-dim anchor points for spline
+            
+    '''
+
+    # Dataset
+    # TODO:: set up to be several different classes of splines
+    # TODO:: add arched arrow
+
+    # set num in linspace to be dependent on distance from one center to another
+    canidate_points = np.linspace(entity1_center, entity2_center, num=50,dtype=np.int)
+
+    # get start point for spline
+    # check for first nth point outside of entity boxes in direct line to other entity
+    tar_point = 5
+    count = 0
+    start_point = None
+    for idx in range(canidate_points.shape[0]-1):
+        current_point = canidate_points[idx,:]
+        if current_point[0] < entity1_bbox[0][0] or current_point[1] < entity1_bbox[0][1] or current_point[0] > entity1_bbox[1][0] or current_point[1] > entity1_bbox[1][1]:
+                count += 1
+                if count == tar_point:
+                    start_point = [math.floor(current_point[0]),math.floor(current_point[1])]
+
+    # get end point for spline
+    count = 0
+    end_point = None
+    for idx in range(canidate_points.shape[0]-1,0,-1):
+        current_point = canidate_points[idx,:]
+        if current_point[0] < entity2_bbox[0][0] or current_point[1] < entity2_bbox[0][1] or current_point[0] > entity2_bbox[1][0] or current_point[1] > entity2_bbox[1][1]:
+                count += 1
+                if count == tar_point:
+                    end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
+
+    spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
+    x_span = spline_points[:,0]
+    y_span = spline_points[:,1]
+
+    # add noise in better way
+    # x_noise = np.random.randint(0,20,(1,))
+    # y_noise = np.random.randint(0,20,(1,))
+    # x_span[1] = x_span[1] + x_noise
+    # y_span[1] = y_span[1] + y_noise
+    # x_span[2] = x_span[2] + x_noise
+    # y_span[2] = y_span[2] + y_noise
+
+
+    return x_span,y_span
+
+
 def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2):
 
     '''
@@ -384,50 +449,9 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     img, entity1_bbox = draw_textbox(self,img,label1,entity1_center,w1,h1)
     img, entity2_bbox = draw_textbox(self,img,label2,entity2_center,w2,h2)
 
-
-    # Dataset
-    # TODO:: set up to be several different classes of splines
-    # TODO:: add arched arrow
-
-    # set num in linspace to be dependent on distance from one center to another
-    anchor_points = np.linspace(entity1_center, entity2_center, num=50,dtype=np.int)
-
-    # get start point for spline
-    # check for first nth point outside of entity boxes in direct line to other entity
-    tar_point = 5
-    count = 0
-    start_point = None
-    for idx in range(anchor_points.shape[0]-1):
-        current_point = anchor_points[idx,:]
-        if current_point[0] < entity1_bbox[0][0] or current_point[1] < entity1_bbox[0][1] or current_point[0] > entity1_bbox[1][0] or current_point[1] > entity1_bbox[1][1]:
-                count += 1
-                if count == tar_point:
-                    start_point = [math.floor(current_point[0]),math.floor(current_point[1])]
-
-    # get end point for spline
-    count = 0
-    end_point = None
-    for idx in range(anchor_points.shape[0]-1,0,-1):
-        current_point = anchor_points[idx,:]
-        if current_point[0] < entity2_bbox[0][0] or current_point[1] < entity2_bbox[0][1] or current_point[0] > entity2_bbox[1][0] or current_point[1] > entity2_bbox[1][1]:
-                count += 1
-                if count == tar_point:
-                    end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
-
-
-    spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
-    x_span = spline_points[:,0]
-    y_span = spline_points[:,1]
-
-    # add noise in better way
-    # x_noise = np.random.randint(0,20,(1,))
-    # y_noise = np.random.randint(0,20,(1,))
-    # x_span[1] = x_span[1] + x_noise
-    # y_span[1] = y_span[1] + y_noise
-    # x_span[2] = x_span[2] + x_noise
-    # y_span[2] = y_span[2] + y_noise
-
+    x_span,y_span = get_spline_anchors(entity1_center,entity2_center,entity1_bbox,entity2_bbox)
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
+
     img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
 
     # get final relationship bbox by taking max dims of spline and indicator
@@ -441,6 +465,20 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     return img,relationship_bbox
 
 def radial_profile(data, center):
+
+    '''
+
+        generates radial profile on given image
+
+        Args:
+            data (np.Array): input 'image'
+            center (list): center coordinates [y,x] of 'image'
+        
+        Return:
+            radialprofile (np.Array): contains normalized sum of binned pixel values from center by radius 
+            
+    '''
+
     y, x = np.indices((data.shape))
     r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
     r = r.astype(np.int)
@@ -455,7 +493,23 @@ def radial_profile(data, center):
 
 
 # x,y now define a center
-def check_slice(template_im,slice_shape,x,y,padding):
+def check_slice(template_im,slice_shape,x,y,padding=0):
+
+    '''
+
+        check if region on image is a location with few high frequency elements
+
+        Args:
+            template_im (np.Array): template image
+            slice_shape (list): contains dimensions of target region as [x_dim,y_dim]
+            x (int): interested location top-left corner x
+            y (int): interested location top-left corner y
+            padding (int): optional extra spacing arround region  
+        
+        Return:
+            (bool): indicates if region is good or not
+            
+    '''
 
     threshold = 50
 
