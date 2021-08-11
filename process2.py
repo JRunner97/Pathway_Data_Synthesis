@@ -379,6 +379,7 @@ def get_spline_anchors(entity1_center,entity2_center,entity1_bbox,entity2_bbox):
     # Dataset
     # TODO:: set up to be several different classes of splines
     # TODO:: add arched arrow
+    # TODO:: corner spline on squares
 
     # set num in linspace to be dependent on distance from one center to another
     canidate_points = np.linspace(entity1_center, entity2_center, num=50,dtype=np.int)
@@ -683,21 +684,24 @@ class copy_thread(threading.Thread):
 
         '''
 
+        # TODO:: set inhibit thickness based of off spline thickness and remove inhibit thickness parameter
+        # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
+
         self.font_style = cv2.FONT_HERSHEY_SIMPLEX
         self.font_size = 0.6
         self.padding = 0
-        self.thickness = 1
+        self.thickness = 4
         self.tip_len = 10
-        self.base_len = 10
+        self.base_len = 20
         self.text_margin = 10
         self.arrow_placement = END
-        self.arrow_color = (120,120,0)
-        self.textbox_background = (255,30,0)
+        self.arrow_color = (0,0,0)
+        self.textbox_background = (0,0,230)
         self.textbox_border_thickness = 1
         self.text_color = (0,0,0)
         self.text_thickness = 1
         self.indicator = INHIBIT
-        self.inhibit_tickness = 2
+        self.inhibit_tickness = 6
 
         # loop through templates
         # read template and get query coords
@@ -847,6 +851,7 @@ def populate_figures():
 
 if __name__ == "__main__":
 
+    #TODO:: lower high-freq threshold based on colors being used for entities and arrows
     # another interesting idea would be to include targeted noise (i.e. lines with no indicator connecting no entities)
     populate_figures()
     
