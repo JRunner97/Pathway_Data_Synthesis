@@ -65,7 +65,7 @@ def get_slope(self,base_points,source_point,x_span,y_span):
     dist = 50
     # lag used to set which point along spline off of entity do we want to select as comparison point
     lag = 10
-    # TODO:: dynamically adjust lag length based on # samples here or change how selecting comparison point
+    # TODO:: dynamically adjust lag length based on # samples here
     candidate_points = []
     candidate_dists = []
     for idx in range(0,max_idx-1,1):
@@ -100,8 +100,21 @@ def get_slope(self,base_points,source_point,x_span,y_span):
 def draw_spline(self,img,x_span,y_span):
 
     '''
-        draws spline
-        returns updated image, slope of spline at interested end, and orientation at interested end
+
+        draws spline between entities
+
+        Args:
+            self: contains hyperparameter config
+            img (np.Array): copied template image for stitching
+            x_span (np.Array): x-dim anchor points for spline
+            y_span (np.Array): y-dim anchor points for spline
+        
+        Return:
+            img (np.Array): updated image with spline
+            f (float): slope of spline at interested end
+            orientation (int): prevailing cardinal direction of spline at interested end
+            spline_bbox (list): 2D-list with bbox corners for spline as [[x,y],[x,y]]
+            
     '''
 
     # get full spline (base_points) from anchor points (x_span,y_span)
@@ -262,7 +275,21 @@ def draw_arrowhead(self,img,x_span,y_span,tip_slope,arrow_orientation):
 def draw_textbox(self,img,label,location,w,h):
 
     '''
-    return center coordinates of boxes
+
+        draw text and surronding box
+
+        Args:
+            self: contains hyperparameter config
+            img (np.Array): copied template image for stitching
+            label (str): text to place as entity
+            location (list): contains target center of entity bbox as [x,y]
+            w (int): contains target x dim of text to place
+            h (int): contains target y dim of text to place
+        
+        Return:
+            img (np.Array): updated image with entities
+            bbox (list): 2D-list with bbox corners for spline and indicator as [[x,y],[x,y]]
+            
     '''
 
     # location is center
@@ -284,10 +311,23 @@ def draw_textbox(self,img,label,location,w,h):
 def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2):
 
     '''
-    draws indictor:
-    build spline points between entities
-    call draw_spline function
-    call draw_indicator function
+
+        draw entities, draw spline, draw indicator
+
+        Args:
+            self: contains hyperparameter config
+            img (np.Array): copied template image for stitching
+            entity1_center (list): contains target center of entity1 bbox as [entity1_center_x,entity1_center_y]
+            entity2_center (list): contains target center of entity2 bbox as [entity2_center_x,entity2_center_y]
+            text1_shape (list): contains target dimensions of text to place as [w1,h1]
+            text2_shape (list): contains target dimensions of text to place as [w2,h2]
+            label1 (str): text to place as entity1 
+            label2 (str): text to place as entity2     
+        
+        Return:
+            img (np.Array): updated image with entities, spline, and indicator drawn on it
+            relationship_bbox (list): 2D-list with bbox corners for spline and indicator as [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
+            
     '''
 
     w1,h1 = text1_shape
@@ -299,6 +339,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
 
     # Dataset
     # TODO:: set up to be several different classes of splines
+    # TODO:: add arched arrow
 
     # set num in linspace to be dependent on distance from one center to another
     anchor_points = np.linspace(entity1_center, entity2_center, num=50,dtype=np.int)
@@ -331,8 +372,12 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     y_span = spline_points[:,1]
 
     # add noise in better way
-    # x_span[1] = x_span[1] + np.random.randint(0,20,(1,))
-    # y_span[1] = y_span[1] + np.random.randint(0,20,(1,))
+    # x_noise = np.random.randint(0,20,(1,))
+    # y_noise = np.random.randint(0,20,(1,))
+    # x_span[1] = x_span[1] + x_noise
+    # y_span[1] = y_span[1] + y_noise
+    # x_span[2] = x_span[2] + x_noise
+    # y_span[2] = y_span[2] + y_noise
 
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
     img, arrowhead_bbox = draw_arrowhead(self,img,x_span,y_span,f,orientation)
@@ -392,6 +437,74 @@ def check_slice(template_im,slice_shape,x,y,padding):
     else:
         return False
 
+                    
+def get_entity_placement(self,slice_shape,x_target,y_target,label1,label2):
+
+    '''
+
+        find positions to place entities
+
+        Args:
+            self: contains hyperparameter config
+            slice_shape (list): contains dimensions of target region as [x_dim,y_dim]
+            x_target (int): top-left corner x placement location 
+            y_target (int): top-left corner y placement location 
+            label1 (str): text to place as entity1 
+            label2 (str): text to place as entity2     
+        
+        Return:
+            entity1_center (list): contains target center of entity1 bbox as [entity1_center_x,entity1_center_y]
+            entity2_center (list): contains target center of entity2 bbox as [entity2_center_x,entity2_center_y]
+            text1_shape (list): contains target dimensions of text to place as [w1,h1]
+            text2_shape (list): contains target dimensions of text to place as [w2,h2]
+            
+    '''
+
+    # For the text background
+    # Finds space required by the text so that we can put a background with that amount of width
+    (w1, h1), _ = cv2.getTextSize(label1, self.font_style, self.font_size, self.text_thickness)
+    (w2, h2), _ = cv2.getTextSize(label2, self.font_style, self.font_size, self.text_thickness)
+    text1_shape = [w1,h1]
+    text2_shape = [w2,h2]
+
+    # 4 configurations/positioning: hotdog, hamburger, square1, square2
+    dim_ratio = slice_shape[0] / slice_shape[1]
+    if dim_ratio > 4:
+        # hotdog
+        entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
+        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
+
+        entity2_center_y = math.floor(slice_shape[1] / 2) + y_target
+        entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
+    elif dim_ratio < 0.25:
+        # hamburger
+        entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
+        entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
+
+        entity2_center_x = math.floor(slice_shape[0] / 2) + x_target
+        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
+    else:
+        # squares: corners
+        if np.random.randint(2):
+            entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
+            entity2_center_y = y_target + math.floor(h2/2)+ self.text_margin
+
+            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
+            entity1_center_y = y_target + slice_shape[1] - math.floor(h1/2) - self.text_margin
+        # squares: flipped corners
+        else:
+            entity1_center_x = x_target + math.floor(w1/2)+ self.text_margin
+            entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
+
+            entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2) - self.text_margin
+            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
+
+    entity1_center = [entity1_center_x,entity1_center_y]
+    entity2_center = [entity2_center_x,entity2_center_y]
+
+    return entity1_center, entity2_center, text1_shape, text2_shape
+
+
 
 class template_thread(threading.Thread):
     def __init__(self, threadID,name,template_list,directory):
@@ -402,6 +515,12 @@ class template_thread(threading.Thread):
         self.directory = directory
 
     def run(self):
+
+        '''
+
+        Start 4 threads for generating x# samples from same templates at once 
+
+        '''
 
         filename = self.template_list[self.threadID]
         
@@ -445,66 +564,6 @@ class template_thread(threading.Thread):
             child_thread2.join()
             child_thread3.join()
 
-
-                    
-def place_entities(self,slice_shape,x_target,y_target,label1,label2):
-
-    '''
-    find positions for entities
-    return their centers and text shape info
-    '''
-
-    # select entity centers
-    # 4 configurations/positioning: hotdog, hamburger, square1, square2
-
-    # For the text background
-    # Finds space required by the text so that we can put a background with that amount of width.
-    (w1, h1), _ = cv2.getTextSize(label1, self.font_style, self.font_size, self.text_thickness)
-    (w2, h2), _ = cv2.getTextSize(label2, self.font_style, self.font_size, self.text_thickness)
-    text1_shape = [w1,h1]
-    text2_shape = [w2,h2]
-
-    # TODO:: add option to add noise
-    # TODO:: add arched arrow
-    # don't think spliting up by 8ths will work
-    dim_ratio = slice_shape[0] / slice_shape[1]
-    if dim_ratio > 4:
-        # hotdog
-        entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
-        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
-
-        entity2_center_y = math.floor(slice_shape[1] / 2) + y_target
-        entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
-    elif dim_ratio < 0.25:
-        # hamburger
-        entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
-        entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
-
-        entity2_center_x = math.floor(slice_shape[0] / 2) + x_target
-        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
-    else:
-        # squares
-        if np.random.randint(2):
-            entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
-            entity2_center_y = y_target + math.floor(h2/2)+ self.text_margin
-
-            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
-            entity1_center_y = y_target + slice_shape[1] - math.floor(h1/2) - self.text_margin
-        else:
-            entity1_center_x = x_target + math.floor(w1/2)+ self.text_margin
-            entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
-
-            entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2) - self.text_margin
-            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
-
-    entity1_center = [entity1_center_x,entity1_center_y]
-    entity2_center = [entity2_center_x,entity2_center_y]
-
-    return entity1_center, entity2_center, text1_shape, text2_shape
-
-
-
-
 class copy_thread(threading.Thread):
     def __init__(self,copyID,name,directory,filename):
         threading.Thread.__init__(self)
@@ -514,6 +573,12 @@ class copy_thread(threading.Thread):
         self.filename = filename
 
     def run(self):
+
+        '''
+
+        Attempt to place x# of samples on a template, save new image, and save annotation
+
+        '''
 
         self.font_style = cv2.FONT_HERSHEY_SIMPLEX
         self.font_size = 0.6
@@ -571,7 +636,7 @@ class copy_thread(threading.Thread):
                 self.indicator = ACTIVATE
 
             # check if queried coords are a valid location
-            for idx in range(100):
+            for idx in range(50):
 
                 # subtracted max bounds to ensure valid coords
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
@@ -580,12 +645,10 @@ class copy_thread(threading.Thread):
                 # check if selected template area is good
                 if check_slice(template_im,slice_shape,x_target,y_target,self.padding):
 
-                    entity1_center,entity2_center,text1_shape,text2_shape = place_entities(self,slice_shape,x_target,y_target,label1,label2)
-
-                    # relationship bbox is xy,xy and anno bboxes need yx,yx,yx,yx
+                    entity1_center,entity2_center,text1_shape,text2_shape = get_entity_placement(self,slice_shape,x_target,y_target,label1,label2)
                     template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2)
 
-                    # TODO:: change this to round
+                    # generate annotation
                     label1_x1 = math.floor(entity1_center[0] - (text1_shape[0]/2))
                     label1_y1 = math.floor(entity1_center[1] - (text1_shape[1]/2))
                     label1_x2 = math.ceil(entity1_center[0] + (text1_shape[0]/2))
@@ -610,19 +673,19 @@ class copy_thread(threading.Thread):
                     label2_shape['label'] = str(element_indx) + ":gene:" + label2
                     element_indx += 1
 
-                    # TODO:: change indicator label based on arrow or t-bar
                     # TODO:: change order label1 and label2 based on arrow pos
                     indicator_shape = copy.deepcopy(base_shape)
                     indicator_shape['points'] = relationship_bbox
                     indicator_shape['ID'] = element_indx
-                    indicator_shape['label'] = str(element_indx) + ":activate:" + str(label1_shape['ID']) + "|" + str(label2_shape['ID'])
+                    if self.indicator == INHIBIT:
+                        indicator_shape['label'] = str(element_indx) + ":inhibit:" + str(label1_shape['ID']) + "|" + str(label2_shape['ID'])
+                    else:
+                        indicator_shape['label'] = str(element_indx) + ":activate:" + str(label1_shape['ID']) + "|" + str(label2_shape['ID'])
                     element_indx += 1
-
 
                     shapes.append(label1_shape)
                     shapes.append(label2_shape)
                     shapes.append(indicator_shape)
-
 
                     break
 
@@ -637,11 +700,16 @@ class copy_thread(threading.Thread):
 
 def populate_figures():
 
+    '''
+
+    Start multiple threads for generating samples from 4 different templates at once 
+
+    '''
+
     # loop through all templates
     stop_flag = False
     directory = "templates"
     template_list = os.listdir(directory)
-    # TODO:: make this more clean
     for template_idx in range(0,len(template_list)-1,4):
 
         if stop_flag:
@@ -675,9 +743,6 @@ def populate_figures():
         thread3.join()
 
 if __name__ == "__main__":
-
-    # TODO:: include annotation 
-
 
     # another interesting idea would be to include targeted noise (i.e. lines with no indicator connecting no entities)
     populate_figures()
