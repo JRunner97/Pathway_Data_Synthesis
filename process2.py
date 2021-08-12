@@ -191,11 +191,19 @@ def draw_spline(self,img,x_span,y_span):
     tmp_len = x_span.size
     if self.arrow_placement == END:
         source_point = [x_span[tmp_len-1],y_span[tmp_len-1]]
+        corner_comparison_pt = [x_span[tmp_len-2],y_span[tmp_len-2]]
     else:
         source_point = [x_span[0],y_span[0]]
+        corner_comparison_pt = [x_span[1],y_span[1]]
 
-    f, comparison_pt = get_slope(self,base_points,source_point,x_span,y_span)
-    orientation = check_orientation(source_point,comparison_pt)
+    
+    if self.spline_type == CORNER:
+        orientation = check_orientation(source_point,corner_comparison_pt)
+        f = np.nan
+    else:
+
+        f, comparison_pt = get_slope(self,base_points,source_point,x_span,y_span)
+        orientation = check_orientation(source_point,comparison_pt)
 
     return img, f, orientation, spline_bbox
 
@@ -234,6 +242,8 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
     # TODO:: fine-tune these thresholds
     # if slope is extreme, then just place simple inicator in cardinal direction
     if math.isnan(tip_slope) or abs(tip_slope) > 10 or abs(tip_slope) < 0.5:
+
+        
 
         if arrow_orientation == UP:
             pt1 = (tri_source[0]-self.base_len, tri_source[1])
@@ -482,7 +492,6 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
                 if count == tar_point:
                     end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
-    # seperate these out into individual function calls
 
     if entity_configuration == LONG or entity_configuration == TALL:
 
@@ -495,6 +504,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
 
     else:
 
+        # TODO:: do this better, maybe set multimodal distribution to pull from
         if np.random.randint(2):
             self.spline_type = CORNER
             spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
