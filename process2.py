@@ -417,24 +417,26 @@ def get_arch_anchors(self,start_point,end_point):
 
 def get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox):
 
+    pad = 15
+
     if entity_configuration == DOWN_SLASH:
         if np.random.randint(2):
-            start_point = [entity1_bbox[1][0]+20,entity1_center[1]]
-            end_point = [entity2_center[0],entity2_bbox[0][1]-20]
+            start_point = [entity1_bbox[1][0]+pad,entity1_center[1]]
+            end_point = [entity2_center[0],entity2_bbox[0][1]-pad]
             corner_point = [entity2_center[0],entity1_center[1]]
         else:
-            start_point = [entity1_center[0],entity1_bbox[1][1]+20]
-            end_point = [entity2_bbox[0][0]-20,entity2_center[1]]
+            start_point = [entity1_center[0],entity1_bbox[1][1]+pad]
+            end_point = [entity2_bbox[0][0]-pad,entity2_center[1]]
             corner_point = [entity1_center[0],entity2_center[1]]
 
     else:
         if np.random.randint(2):
-            start_point = [entity1_bbox[0][0]-20,entity1_center[1]]
-            end_point = [entity2_center[0],entity2_bbox[0][1]-20]
+            start_point = [entity1_bbox[0][0]-pad,entity1_center[1]]
+            end_point = [entity2_center[0],entity2_bbox[0][1]-pad]
             corner_point = [entity2_center[0],entity1_center[1]]
         else:
-            start_point = [entity1_center[0],entity1_bbox[1][1]+20]
-            end_point = [entity2_bbox[1][0]+20,entity2_center[1]]
+            start_point = [entity1_center[0],entity1_bbox[1][1]+pad]
+            end_point = [entity2_bbox[1][0]+pad,entity2_center[1]]
             corner_point = [entity1_center[0],entity2_center[1]]
 
     spline_points = np.array([start_point,corner_point,end_point])
@@ -505,7 +507,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
     else:
 
         # TODO:: do this better, maybe set multimodal distribution to pull from
-        if np.random.randint(2):
+        if np.random.randint(2) and abs(entity1_center[0]-entity2_center[0]) > 50 and abs(entity1_center[1]-entity2_center[1]) > 50:
             self.spline_type = CORNER
             spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
         elif np.random.randint(2):
@@ -847,6 +849,9 @@ class copy_thread(threading.Thread):
             self.spline_type = LINE
 
             # TODO:: make set of names to pull from or characters
+            # TODO:: make background textbox color change, focus on light colors
+            # TODO:: include more dynamic variations of textbox (oval, no textbox)
+            # TODO:: dynamically change indicator length and width
 
             tmp_str_len = random.randint(3,7)
             label1 = randomword(tmp_str_len).upper()
@@ -921,10 +926,10 @@ class copy_thread(threading.Thread):
 
                     break
 
-            # TODO:: these boxes do not match with fig
-            template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
-            if relation_idx == 2:
-                break
+            # # TODO:: these boxes do not match with fig
+            # template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
+            # if relation_idx == 2:
+            #     break
 
         # save json and new image
         im_dir = "output_test"
