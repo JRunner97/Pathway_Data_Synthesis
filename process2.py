@@ -35,6 +35,12 @@ LINE = 0
 ARCH = 1
 CORNER = 2
 
+LONG = 0
+TALL = 1
+DOWN_SLASH = 2
+UP_SLASH = 3
+
+
 def randomword(length):
    letters = string.ascii_lowercase
    return ''.join(random.choice(letters) for i in range(length))
@@ -147,12 +153,17 @@ def draw_spline(self,img,x_span,y_span):
             spline_bbox (list): 2D-list with bbox corners for spline as [[x,y],[x,y]]
             
     '''
+    
+    if self.spline_type == CORNER:
+        spline_coef = x_span.size-2
+    else:
+        spline_coef = x_span.size-1
 
     # get full spline (base_points) from anchor points (x_span,y_span)
     param = np.linspace(0, 1, x_span.size)
     # clever way to break it up to avoid 1st param no duplicate error
     # make linespace to serve as first param and interpolating the target values which is the set of x & y values
-    spl = make_interp_spline(param, np.c_[x_span,y_span], k=x_span.size-1) #(1)
+    spl = make_interp_spline(param, np.c_[x_span,y_span], k=spline_coef) #(1)
     # TODO:: change 500 parameter to be dynamic based on manitude differences in x_span
     X_, Y_ = spl(np.linspace(0, 1, x_span.size * 200)).T
 
@@ -356,7 +367,71 @@ def draw_textbox(self,img,label,location,w,h):
 
     return img, bbox
 
-def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox):
+def get_arch_anchors(self,start_point,end_point):
+
+    point_dist = math.dist(start_point,end_point)
+    arch_radius = self.arch_ratio * point_dist
+
+    # randomly select indicator head
+    if np.random.randint(2):
+        arch_radius *= -1
+
+    x1 = start_point[0]
+    y1 = start_point[1]
+    x2 = end_point[0]
+    y2 = end_point[1]
+    mid_point = [(x1+x2)/2,(y1+y2)/2]
+
+    # TODO:: make sign of arch_radius dynamic
+    # account for different orientations of end_point and start_point
+    if x1 == x2:
+        arch_anchor = [math.floor(mid_point[0]+arch_radius),math.floor(mid_point[1])]
+    elif y1 == y2:
+        arch_anchor = [math.floor(mid_point[0]),math.floor(mid_point[1]+arch_radius)]
+    else:
+        f=(y2-y1)/(x2-x1)*-1
+        perp_slope = -1/f
+
+        radians = math.atan(perp_slope)
+        base_rise = arch_radius * math.sin(radians)
+        base_run = base_rise / perp_slope
+        base_rise = math.floor(base_rise)
+        base_run = math.floor(base_run)
+
+        mid_point = [(x1+x2)/2,(y1+y2)/2]
+        arch_anchor = [math.floor(mid_point[0]-base_run),math.floor(mid_point[1]+base_rise)]
+
+    spline_points = np.array([start_point,arch_anchor,end_point])
+
+    return spline_points
+
+def get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox):
+
+    if entity_configuration == DOWN_SLASH:
+        if np.random.randint(2):
+            start_point = [entity1_bbox[1][0]+20,entity1_center[1]]
+            end_point = [entity2_center[0],entity2_bbox[0][1]-20]
+            corner_point = [entity2_center[0],entity1_center[1]]
+        else:
+            start_point = [entity1_center[0],entity1_bbox[1][1]+20]
+            end_point = [entity2_bbox[0][0]-20,entity2_center[1]]
+            corner_point = [entity1_center[0],entity2_center[1]]
+
+    else:
+        if np.random.randint(2):
+            start_point = [entity1_bbox[0][0]-20,entity1_center[1]]
+            end_point = [entity2_center[0],entity2_bbox[0][1]-20]
+            corner_point = [entity2_center[0],entity1_center[1]]
+        else:
+            start_point = [entity1_center[0],entity1_bbox[1][1]+20]
+            end_point = [entity2_bbox[1][0]+20,entity2_center[1]]
+            corner_point = [entity1_center[0],entity2_center[1]]
+
+    spline_points = np.array([start_point,corner_point,end_point])
+
+    return spline_points
+
+def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration):
 
     '''
 
@@ -379,6 +454,8 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
     # TODO:: set up to be several different classes of splines
     # TODO:: add arched arrow
     # TODO:: corner spline on squares
+
+    # TODO:: don't need top block for corners
 
     # set num in linspace to be dependent on distance from one center to another
     canidate_points = np.linspace(entity1_center, entity2_center, num=50,dtype=np.int)
@@ -405,46 +482,28 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
                 if count == tar_point:
                     end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
+    # seperate these out into individual function calls
 
-    if self.spline_type == LINE:
-        spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
+    if entity_configuration == LONG or entity_configuration == TALL:
 
-    elif self.spline_type == ARCH:
-
-        point_dist = math.dist(start_point,end_point)
-        arch_radius = self.arch_ratio * point_dist
-
-        x1 = start_point[0]
-        y1 = start_point[1]
-        x2 = end_point[0]
-        y2 = end_point[1]
-        mid_point = [(x1+x2)/2,(y1+y2)/2]
-
-        # TODO:: make sign of arch_radius dynamic
-        # account for different orientations of end_point and start_point
-        if x1 == x2:
-            arch_anchor = [math.floor(mid_point[0]+arch_radius),math.floor(mid_point[1])]
-        elif y1 == y2:
-            arch_anchor = [math.floor(mid_point[0]),math.floor(mid_point[1]+arch_radius)]
+        if np.random.randint(2):
+            # LINE
+            spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
         else:
-            f=(y2-y1)/(x2-x1)*-1
-            perp_slope = -1/f
+            # ARCH
+            spline_points = get_arch_anchors(self,start_point,end_point)
 
-            radians = math.atan(perp_slope)
-            base_rise = arch_radius * math.sin(radians)
-            base_run = base_rise / perp_slope
-            base_rise = math.floor(base_rise)
-            base_run = math.floor(base_run)
-
-            mid_point = [(x1+x2)/2,(y1+y2)/2]
-            arch_anchor = [math.floor(mid_point[0]-base_run),math.floor(mid_point[1]+base_rise)]
-
-        spline_points = np.array([start_point,arch_anchor,end_point])
-
-    # corner
     else:
-        spline_points = None
 
+        if np.random.randint(2):
+            self.spline_type = CORNER
+            spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
+        elif np.random.randint(2):
+            # ARCH
+            spline_points = get_arch_anchors(self,start_point,end_point)
+        else:
+            # LINE
+            spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
 
     x_span = spline_points[:,0]
     y_span = spline_points[:,1]
@@ -461,7 +520,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
     return x_span,y_span
 
 
-def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2):
+def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2,entity_configuration):
 
     '''
 
@@ -489,7 +548,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     img, entity1_bbox = draw_textbox(self,img,label1,entity1_center,w1,h1)
     img, entity2_bbox = draw_textbox(self,img,label2,entity2_center,w2,h2)
 
-    x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
+    x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration)
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
 
     img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
@@ -612,40 +671,49 @@ def get_entity_placement(self,slice_shape,x_target,y_target,label1,label2):
 
     # 4 configurations/positioning: hotdog, hamburger, square1, square2
     dim_ratio = slice_shape[0] / slice_shape[1]
-    if dim_ratio > 4:
-        # hotdog
+    if dim_ratio > 1.67:
+        # LONG
         entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
         entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
 
         entity2_center_y = math.floor(slice_shape[1] / 2) + y_target
         entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
-    elif dim_ratio < 0.25:
-        # hamburger
+
+        entity_configuration = LONG
+    elif dim_ratio < .6:
+        # TALL
         entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
         entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
 
         entity2_center_x = math.floor(slice_shape[0] / 2) + x_target
         entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
-    else:
-        # squares: corners
-        if np.random.randint(2):
-            entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
-            entity2_center_y = y_target + math.floor(h2/2)+ self.text_margin
 
-            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
-            entity1_center_y = y_target + slice_shape[1] - math.floor(h1/2) - self.text_margin
-        # squares: flipped corners
-        else:
-            entity1_center_x = x_target + math.floor(w1/2)+ self.text_margin
+        entity_configuration = TALL
+    else:
+        # DOWN_SLASH
+        if np.random.randint(2):
+            entity1_center_x = x_target + math.floor(w1/2) + self.text_margin
             entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
 
             entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2) - self.text_margin
             entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
 
+            entity_configuration = DOWN_SLASH
+        # UP_SLASH
+        else:
+            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
+            entity1_center_y = y_target + math.floor(h1/2) + self.text_margin
+
+            entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
+            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
+
+            entity_configuration = UP_SLASH
+
+
     entity1_center = [entity1_center_x,entity1_center_y]
     entity2_center = [entity2_center_x,entity2_center_y]
 
-    return entity1_center, entity2_center, text1_shape, text2_shape
+    return entity1_center, entity2_center, text1_shape, text2_shape, entity_configuration
 
 
 
@@ -763,6 +831,11 @@ class copy_thread(threading.Thread):
         }
         for relation_idx in range(30):
 
+            # change to remove setting CORNER
+            # make each entity config has set of possible arrows (eg. hotog has line and arch/ square has line, arch, and corner)
+
+            self.spline_type = LINE
+
             # TODO:: make set of names to pull from or characters
 
             tmp_str_len = random.randint(3,7)
@@ -791,8 +864,11 @@ class copy_thread(threading.Thread):
                 # check if selected template area is good
                 if check_slice(template_im,slice_shape,x_target,y_target,self.padding):
 
-                    entity1_center,entity2_center,text1_shape,text2_shape = get_entity_placement(self,slice_shape,x_target,y_target,label1,label2)
-                    template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2)
+                    # print('slice shape')
+                    # print(slice_shape)
+
+                    entity1_center,entity2_center,text1_shape,text2_shape,entity_configuration = get_entity_placement(self,slice_shape,x_target,y_target,label1,label2)
+                    template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2,entity_configuration)
 
                     # generate annotation
                     label1_x1 = math.floor(entity1_center[0] - (text1_shape[0]/2))
@@ -834,6 +910,11 @@ class copy_thread(threading.Thread):
                     shapes.append(indicator_shape)
 
                     break
+
+            # TODO:: these boxes do not match with fig
+            template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
+            if relation_idx == 2:
+                break
 
         # save json and new image
         im_dir = "output_test"
