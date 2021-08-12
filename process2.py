@@ -31,6 +31,10 @@ RIGHT = 3
 INHIBIT = 0
 ACTIVATE = 1
 
+LINE = 0
+ARCH = 1
+CORNER = 2
+
 def randomword(length):
    letters = string.ascii_lowercase
    return ''.join(random.choice(letters) for i in range(length))
@@ -148,9 +152,9 @@ def draw_spline(self,img,x_span,y_span):
     param = np.linspace(0, 1, x_span.size)
     # clever way to break it up to avoid 1st param no duplicate error
     # make linespace to serve as first param and interpolating the target values which is the set of x & y values
-    spl = make_interp_spline(param, np.c_[x_span,y_span], k=3) #(1)
+    spl = make_interp_spline(param, np.c_[x_span,y_span], k=x_span.size-1) #(1)
     # TODO:: change 500 parameter to be dynamic based on manitude differences in x_span
-    X_, Y_ = spl(np.linspace(0, 1, x_span.size * 500)).T #(2)
+    X_, Y_ = spl(np.linspace(0, 1, x_span.size * 200)).T
 
     X_ = np.round(X_, 0).astype(int)
     Y_ = np.round(Y_, 0).astype(int)
@@ -205,9 +209,11 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
             
     '''
 
+    num_points = x_span.size
+
     # get reference point
     if self.arrow_placement == END:
-        tri_source = [x_span[3],y_span[3]]
+        tri_source = [x_span[num_points-1],y_span[num_points-1]]
     else:
         tri_source = [x_span[0],y_span[0]]
 
@@ -237,7 +243,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
         if self.indicator == INHIBIT:
             triangle_cnt = np.array( [pt1, pt3] )
-            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.inhibit_tickness)
+            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
         else:
             triangle_cnt = np.array( [pt1, pt2, pt3] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
@@ -260,17 +266,11 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
         tip_run = math.floor(tip_run)
 
         # get location of arrowhead base points w/ law of sines and similar triangles
-        if arrow_orientation == RIGHT or arrow_orientation == LEFT:
-            base_rise = (self.base_len * math.sin(base_deg))
-            base_run = base_rise / arrowhead_base_slpe
-            base_rise = math.floor(base_rise)
-            base_run = math.floor(base_run)
-        else:
-            # use similar triangles for run instead of pythogorean to avoid sign issues
-            base_rise = self.base_len * math.sin(base_deg)
-            base_run = base_rise / arrowhead_base_slpe
-            base_rise = math.floor(base_rise)
-            base_run = math.floor(base_run)
+        # use similar triangles for run instead of pythogorean to avoid sign issues
+        base_rise = self.base_len * math.sin(base_deg)
+        base_run = base_rise / arrowhead_base_slpe
+        base_rise = math.floor(base_rise)
+        base_run = math.floor(base_run)
 
 
         pt1 = (tri_source[0]-base_run, tri_source[1]+base_rise)
@@ -296,18 +296,18 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
         if self.indicator == INHIBIT:
             triangle_cnt = np.array( [pt1, pt3] )
-            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.inhibit_tickness)
+            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
         else:
             triangle_cnt = np.array( [pt1, pt2, pt3] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
 
     # get bbox dims for corresponding indicator
     if self.indicator == INHIBIT:
-        min_x = min([pt1[0],pt3[0]]) - self.inhibit_tickness
-        min_y = min([pt1[1],pt3[1]]) - self.inhibit_tickness
+        min_x = min([pt1[0],pt3[0]]) - self.thickness + 2
+        min_y = min([pt1[1],pt3[1]]) - self.thickness + 2
 
-        max_x = max([pt1[0],pt3[0]]) + self.inhibit_tickness
-        max_y = max([pt1[1],pt3[1]]) + self.inhibit_tickness
+        max_x = max([pt1[0],pt3[0]]) + self.thickness + 2
+        max_y = max([pt1[1],pt3[1]]) + self.thickness + 2
     else:
         min_x = min([pt1[0],pt2[0],pt3[0]])
         min_y = min([pt1[1],pt2[1],pt3[1]])
@@ -356,7 +356,7 @@ def draw_textbox(self,img,label,location,w,h):
 
     return img, bbox
 
-def get_spline_anchors(entity1_center,entity2_center,entity1_bbox,entity2_bbox):
+def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox):
 
     '''
 
@@ -364,7 +364,6 @@ def get_spline_anchors(entity1_center,entity2_center,entity1_bbox,entity2_bbox):
 
         Args:
             self: contains hyperparameter config
-            img (np.Array): copied template image for stitching
             entity1_center (list): contains target center of entity1 bbox as [entity1_center_x,entity1_center_y]
             entity2_center (list): contains target center of entity2 bbox as [entity2_center_x,entity2_center_y]  
             entity1_bbox (list): 2D-list with entity1 bbox corners as [[x,y],[x,y]]
@@ -406,7 +405,47 @@ def get_spline_anchors(entity1_center,entity2_center,entity1_bbox,entity2_bbox):
                 if count == tar_point:
                     end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
-    spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
+
+    if self.spline_type == LINE:
+        spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
+
+    elif self.spline_type == ARCH:
+
+        point_dist = math.dist(start_point,end_point)
+        arch_radius = self.arch_ratio * point_dist
+
+        x1 = start_point[0]
+        y1 = start_point[1]
+        x2 = end_point[0]
+        y2 = end_point[1]
+        mid_point = [(x1+x2)/2,(y1+y2)/2]
+
+        # TODO:: make sign of arch_radius dynamic
+        # account for different orientations of end_point and start_point
+        if x1 == x2:
+            arch_anchor = [math.floor(mid_point[0]+arch_radius),math.floor(mid_point[1])]
+        elif y1 == y2:
+            arch_anchor = [math.floor(mid_point[0]),math.floor(mid_point[1]+arch_radius)]
+        else:
+            f=(y2-y1)/(x2-x1)*-1
+            perp_slope = -1/f
+
+            radians = math.atan(perp_slope)
+            base_rise = arch_radius * math.sin(radians)
+            base_run = base_rise / perp_slope
+            base_rise = math.floor(base_rise)
+            base_run = math.floor(base_run)
+
+            mid_point = [(x1+x2)/2,(y1+y2)/2]
+            arch_anchor = [math.floor(mid_point[0]-base_run),math.floor(mid_point[1]+base_rise)]
+
+        spline_points = np.array([start_point,arch_anchor,end_point])
+
+    # corner
+    else:
+        spline_points = None
+
+
     x_span = spline_points[:,0]
     y_span = spline_points[:,1]
 
@@ -450,7 +489,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     img, entity1_bbox = draw_textbox(self,img,label1,entity1_center,w1,h1)
     img, entity2_bbox = draw_textbox(self,img,label2,entity2_center,w2,h2)
 
-    x_span,y_span = get_spline_anchors(entity1_center,entity2_center,entity1_bbox,entity2_bbox)
+    x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
 
     img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
@@ -684,15 +723,14 @@ class copy_thread(threading.Thread):
 
         '''
 
-        # TODO:: set inhibit thickness based of off spline thickness and remove inhibit thickness parameter
-        # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
+         # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
 
         self.font_style = cv2.FONT_HERSHEY_SIMPLEX
         self.font_size = 0.6
         self.padding = 0
-        self.thickness = 4
+        self.thickness = 2
         self.tip_len = 10
-        self.base_len = 20
+        self.base_len = 10
         self.text_margin = 10
         self.arrow_placement = END
         self.arrow_color = (0,0,0)
@@ -701,7 +739,8 @@ class copy_thread(threading.Thread):
         self.text_color = (0,0,0)
         self.text_thickness = 1
         self.indicator = INHIBIT
-        self.inhibit_tickness = 6
+        self.arch_ratio = 0.1
+        self.spline_type = LINE
 
         # loop through templates
         # read template and get query coords
@@ -816,7 +855,12 @@ def populate_figures():
     # loop through all templates
     stop_flag = False
     directory = "templates"
-    template_list = os.listdir(directory)
+    filename_list = os.listdir(directory)
+    template_list = []
+    for file in filename_list:
+        if '.DS_' not in file:
+            template_list.append(file)
+
     for template_idx in range(0,len(template_list)-1,4):
 
         if stop_flag:
