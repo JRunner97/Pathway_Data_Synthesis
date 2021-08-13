@@ -769,7 +769,7 @@ class template_thread(threading.Thread):
         
         # how many images per template
         stop_child_flag = False
-        num_copies = 8
+        num_copies = 64
         for copy_idx in range(0,num_copies):
 
             # children in here
@@ -866,8 +866,6 @@ class copy_thread(threading.Thread):
             # change to remove setting CORNER
             # make each entity config has set of possible arrows (eg. hotog has line and arch/ square has line, arch, and corner)
 
-            self.spline_type = LINE
-
             # TODO:: make set of names to pull from or characters
             # TODO:: make background textbox color change, focus on light colors
             # TODO:: include more dynamic variations of textbox (oval, no textbox)
@@ -883,12 +881,6 @@ class copy_thread(threading.Thread):
             y_dim = np.random.randint(100,500)
             slice_shape = [x_dim,y_dim]
 
-            # randomly select indicator head
-            if np.random.randint(2):
-                self.indicator = INHIBIT
-            else:
-                self.indicator = ACTIVATE
-
             # check if queried coords are a valid location
             for idx in range(50):
 
@@ -899,8 +891,12 @@ class copy_thread(threading.Thread):
                 # check if selected template area is good
                 if check_slice(template_im,slice_shape,x_target,y_target,self.padding):
 
-                    # print('slice shape')
-                    # print(slice_shape)
+                    self.spline_type = LINE
+                    # randomly select indicator head
+                    if np.random.randint(2):
+                        self.indicator = INHIBIT
+                    else:
+                        self.indicator = ACTIVATE
 
                     entity1_center,entity2_center,text1_shape,text2_shape,entity_configuration = get_entity_placement(self,slice_shape,x_target,y_target,label1,label2)
                     template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2,entity_configuration)
