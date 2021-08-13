@@ -365,10 +365,22 @@ def draw_textbox(self,img,label,location,w,h):
     x1 = location[0] - math.floor(w/2) - self.text_margin
     y1 = location[1] - math.floor(h/2) - self.text_margin
 
+    # case 1: rectangle
+    # case 2: ellipse
+    # case 3: no shape
+    rand_int = np.random.randint(3)
+    if rand_int == 0:
+        img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
+        if np.random.randint(2):
+            img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
+    elif rand_int == 1:
+        img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
+        if np.random.randint(2):
+            img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, (0,0,0), self.textbox_border_thickness)
+    
+
     # places text
     # to add boarder just do same rectangle but don't fill and can just make it to include optionally
-    img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
-    img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
     # putText takes coordinates of the bottom-left corner of the text string
     img = cv2.putText(img, label, (x1 + self.text_margin, y1 + h + self.text_margin), self.font_style, self.font_size, self.text_color, self.text_thickness)
 
@@ -507,10 +519,11 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
     else:
 
         # TODO:: do this better, maybe set multimodal distribution to pull from
-        if np.random.randint(2) and abs(entity1_center[0]-entity2_center[0]) > 50 and abs(entity1_center[1]-entity2_center[1]) > 50:
+        rand_int = np.random.randint(3)
+        if rand_int == 0 and abs(entity1_center[0]-entity2_center[0]) > 50 and abs(entity1_center[1]-entity2_center[1]) > 50:
             self.spline_type = CORNER
             spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
-        elif np.random.randint(2):
+        elif rand_int == 1:
             # ARCH
             spline_points = get_arch_anchors(self,start_point,end_point)
         else:
@@ -557,7 +570,14 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     w1,h1 = text1_shape
     w2,h2 = text2_shape
 
+    # randomly set color
+    new_color = [np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)]
+    self.textbox_background = tuple(new_color)
     img, entity1_bbox = draw_textbox(self,img,label1,entity1_center,w1,h1)
+
+    # randomly set color
+    new_color = [np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)]
+    self.textbox_background = tuple(new_color)
     img, entity2_bbox = draw_textbox(self,img,label2,entity2_center,w2,h2)
 
     x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration)
@@ -853,9 +873,9 @@ class copy_thread(threading.Thread):
             # TODO:: include more dynamic variations of textbox (oval, no textbox)
             # TODO:: dynamically change indicator length and width
 
-            tmp_str_len = random.randint(3,7)
+            tmp_str_len = np.random.randint(3,7)
             label1 = randomword(tmp_str_len).upper()
-            tmp_str_len = random.randint(3,7)
+            tmp_str_len = np.random.randint(3,7)
             label2 = randomword(tmp_str_len).upper()
 
             # TODO:: set y_dim params based on x_dim value
