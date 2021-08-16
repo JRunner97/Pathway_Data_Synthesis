@@ -958,7 +958,7 @@ class copy_thread(threading.Thread):
                     label2_shape['label'] = str(element_indx) + ":gene:" + label2
                     element_indx += 1
 
-                    if self.arrow_placement == END:
+                    if self.arrow_placement == START:
                         id2id_str = str(label2_shape['ID']) + "|" + str(label1_shape['ID'])
                     else:
                         id2id_str = str(label1_shape['ID']) + "|" + str(label2_shape['ID'])
@@ -1047,4 +1047,3 @@ if __name__ == "__main__":
     # TODO:: lower high-freq threshold based on colors being used for entities and arrows
     # another interesting idea would be to include targeted noise (i.e. lines with no indicator connecting no entities)
     populate_figures()
-    
