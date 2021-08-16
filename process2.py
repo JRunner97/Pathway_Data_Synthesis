@@ -41,7 +41,7 @@ def randomword(length):
 
 def check_orientation(source_point,comparison_pt):
 
-    '''
+    """
 
         get prevailing cardinal direction of spline at interested end
 
@@ -52,7 +52,7 @@ def check_orientation(source_point,comparison_pt):
         Return:
             orientation (int): prevailing cardinal direction of spline at interested end
             
-    '''
+    """
 
     # check orientation
     # look at prevailing dimension of change
@@ -73,7 +73,7 @@ def check_orientation(source_point,comparison_pt):
 
 def get_slope(self,base_points,source_point,x_span,y_span):
 
-    '''
+    """
 
         draws spline between entities
 
@@ -88,7 +88,7 @@ def get_slope(self,base_points,source_point,x_span,y_span):
             f (float): slope of spline at interested end
             comparison_pt (list): spline point used as reference for deterimining slope [x,y]
             
-    '''
+    """
 
     # select distinct and nth closest
     max_idx = base_points.shape[0] - 1
@@ -132,7 +132,7 @@ def get_slope(self,base_points,source_point,x_span,y_span):
 
 def draw_spline(self,img,x_span,y_span):
 
-    '''
+    """
 
         draws spline between entities
 
@@ -148,7 +148,7 @@ def draw_spline(self,img,x_span,y_span):
             orientation (int): prevailing cardinal direction of spline at interested end
             spline_bbox (list): 2D-list with bbox corners for spline as [[x,y],[x,y]]
             
-    '''
+    """
     
     if self.spline_type == CORNER:
         spline_coef = x_span.size-2
@@ -207,7 +207,7 @@ def draw_spline(self,img,x_span,y_span):
 
 def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
-    '''
+    """
 
         draw indicator
 
@@ -223,7 +223,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
             img (np.Array): updated image with indicator drawn on it
             indicator_bbox (list): 2D-list with bbox corners for indicator as [[x,y],[x,y]]
             
-    '''
+    """
 
     num_points = x_span.size
 
@@ -340,7 +340,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
 def draw_textbox(self,img,label,location,w,h):
 
-    '''
+    """
 
         draw text and surronding box
 
@@ -356,7 +356,7 @@ def draw_textbox(self,img,label,location,w,h):
             img (np.Array): updated image with entities
             bbox (list): 2D-list with bbox corners for spline and indicator as [[x,y],[x,y]]
             
-    '''
+    """
 
     # location is center
     x1 = location[0] - math.floor(w/2) - self.text_margin
@@ -454,7 +454,7 @@ def get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity
 
 def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration):
 
-    '''
+    """
 
         draw entities, draw spline, draw indicator
 
@@ -469,7 +469,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
             x_span (np.Array): x-dim anchor points for spline
             y_span (np.Array): y-dim anchor points for spline
             
-    '''
+    """
 
     # Dataset
     # TODO:: set up to be several different classes of splines
@@ -544,7 +544,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
 
 def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2,entity_configuration):
 
-    '''
+    """
 
         draw entities, draw spline, draw indicator
 
@@ -562,7 +562,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
             img (np.Array): updated image with entities, spline, and indicator drawn on it
             relationship_bbox (list): 2D-list with bbox corners for spline and indicator as [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
             
-    '''
+    """
 
     w1,h1 = text1_shape
     w2,h2 = text2_shape
@@ -598,7 +598,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
 
 def radial_profile(data, center):
 
-    '''
+    """
 
         generates radial profile on given image
 
@@ -609,7 +609,7 @@ def radial_profile(data, center):
         Return:
             radialprofile (np.Array): contains normalized sum of binned pixel values from center by radius 
             
-    '''
+    """
 
     y, x = np.indices((data.shape))
     r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
@@ -627,7 +627,7 @@ def radial_profile(data, center):
 # x,y now define a center
 def check_slice(template_im,slice_shape,x,y,padding=0):
 
-    '''
+    """
 
         check if region on image is a location with few high frequency elements
 
@@ -641,7 +641,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
         Return:
             (bool): indicates if region is good or not
             
-    '''
+    """
 
     threshold = 50
 
@@ -675,7 +675,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
                     
 def get_entity_placement(self,slice_shape,x_target,y_target,label1,label2):
 
-    '''
+    """
 
         find positions to place entities
 
@@ -693,7 +693,7 @@ def get_entity_placement(self,slice_shape,x_target,y_target,label1,label2):
             text1_shape (list): contains target dimensions of text to place as [w1,h1]
             text2_shape (list): contains target dimensions of text to place as [w2,h2]
             
-    '''
+    """
 
     # For the text background
     # Finds space required by the text so that we can put a background with that amount of width
@@ -760,11 +760,11 @@ class template_thread(threading.Thread):
 
     def run(self):
 
-        '''
+        """
 
         Start 4 threads for generating x# samples from same templates at once 
 
-        '''
+        """
 
         filename = self.template_list[self.threadID]
         
@@ -841,11 +841,11 @@ class copy_thread(threading.Thread):
 
     def run(self):
 
-        '''
+        """
 
         Attempt to place x# of samples on a template, save new image, and save annotation
 
-        '''
+        """
 
          # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
 
@@ -995,11 +995,11 @@ class copy_thread(threading.Thread):
 
 def populate_figures():
 
-    '''
+    """
 
     Start multiple threads for generating samples from 4 different templates at once 
 
-    '''
+    """
 
     # loop through all templates
     stop_flag = False
