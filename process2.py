@@ -495,6 +495,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
 
     # get end point for spline
     count = 0
+    # TODO:: end_point not getting set **************** bug
     end_point = None
     for idx in range(canidate_points.shape[0]-1,0,-1):
         current_point = canidate_points[idx,:]
@@ -673,7 +674,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
         return False
 
                     
-def get_entity_placement(self,slice_shape,x_target,y_target,label1,label2):
+def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_shape):
 
     """
 
@@ -697,10 +698,8 @@ def get_entity_placement(self,slice_shape,x_target,y_target,label1,label2):
 
     # For the text background
     # Finds space required by the text so that we can put a background with that amount of width
-    (w1, h1), _ = cv2.getTextSize(label1, self.font_style, self.font_size, self.text_thickness)
-    (w2, h2), _ = cv2.getTextSize(label2, self.font_style, self.font_size, self.text_thickness)
-    text1_shape = [w1,h1]
-    text2_shape = [w2,h2]
+    (w1, h1) = text1_shape
+    (w2, h2) = text2_shape
 
     # 4 configurations/positioning: hotdog, hamburger, square1, square2
     dim_ratio = slice_shape[0] / slice_shape[1]
@@ -746,7 +745,7 @@ def get_entity_placement(self,slice_shape,x_target,y_target,label1,label2):
     entity1_center = [entity1_center_x,entity1_center_y]
     entity2_center = [entity2_center_x,entity2_center_y]
 
-    return entity1_center, entity2_center, text1_shape, text2_shape, entity_configuration
+    return entity1_center, entity2_center, entity_configuration
 
 
 
@@ -808,26 +807,34 @@ class template_thread(threading.Thread):
             child_thread2.join()
             child_thread3.join()
 
-def set_config(self):
-    font_style_list = [cv2.FONT_HERSHEY_SIMPLEX, cv2.QT_FONT_NORMAL, cv2.FONT_HERSHEY_TRIPLEX,
-                           cv2.FONT_HERSHEY_DUPLEX]
-    # TODO:: do this random selection every placement
-    self.font_style = random.choice(font_style_list)
-    self.font_size = random.randint(5, 8) * 0.1
+def set_relationship_config(self):
+    
     self.padding = 0
     self.thickness = random.randint(2, 4)
     self.tip_len = random.randint(5, 15)
     self.base_len = random.randint(10, 20)
-    self.text_margin = random.randint(5, 15)
+    
     self.arrow_placement = random.choice([START, END])
     self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-    self.textbox_background = (0,0,230)
-    self.textbox_border_thickness = random.randint(0, 2)
     # self.text_color = (0,0,0)
-    self.text_thickness = random.randint(1, 2)
     self.indicator = random.choice([INHIBIT, ACTIVATE])
     self.arch_ratio = 0.1
     self.spline_type = LINE
+
+    return self
+
+def set_text_config(self):
+
+    font_style_list = [cv2.FONT_HERSHEY_SIMPLEX, cv2.QT_FONT_NORMAL, cv2.FONT_HERSHEY_TRIPLEX,
+                           cv2.FONT_HERSHEY_DUPLEX]
+
+    self.font_style = random.choice(font_style_list)
+    self.font_size = random.randint(5, 8) * 0.1
+    self.text_margin = random.randint(5, 15)
+    self.text_thickness = random.randint(1, 2)
+    self.textbox_background = (0,0,230)
+    self.textbox_border_thickness = random.randint(0, 2)
+
 
     return self
 
@@ -855,6 +862,7 @@ class copy_thread(threading.Thread):
         # self.font_style = random.choice(font_style_list)
         # self.font_size = random.randint(5, 8) * 0.1
         self.padding = 0
+        # self = set_relationship_config(self)
         # self.thickness = random.randint(2, 4)
         # self.tip_len = random.randint(5, 15)
         # self.base_len = random.randint(10, 20)
@@ -898,16 +906,23 @@ class copy_thread(threading.Thread):
             # TODO:: include more dynamic variations of textbox (oval, no textbox)
             # TODO:: dynamically change indicator length and width
 
+            self = set_text_config(self)
+
             tmp_str_len = np.random.randint(3,7)
             label1 = randomword(tmp_str_len).upper()
             tmp_str_len = np.random.randint(3,7)
             label2 = randomword(tmp_str_len).upper()
 
+            (w1, h1), _ = cv2.getTextSize(label1, self.font_style, self.font_size, self.text_thickness)
+            (w2, h2), _ = cv2.getTextSize(label2, self.font_style, self.font_size, self.text_thickness)
+            text1_shape = [w1,h1]
+            text2_shape = [w2,h2]
+
             # TODO:: set y_dim params based on x_dim value
             # TODO:: set these values to be dependent of dims of text to place (i.e. make sure box is big enough for them)
             # if we want to base y_dim off x_dim, then do we want one to be biased large if the other is small and vice versa?
-            x_dim = np.random.randint(100,500)
-            y_dim = np.random.randint(100,500)
+            x_dim = np.random.randint(100,300) + w1 + w2
+            y_dim = np.random.randint(100,300) + h1 + h2
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
@@ -922,11 +937,8 @@ class copy_thread(threading.Thread):
 
                     self.spline_type = LINE
 
-                    self = set_config(self)
-
-
-                    entity1_center,entity2_center,text1_shape,text2_shape,entity_configuration = get_entity_placement(self,slice_shape,x_target,y_target,label1,label2)
-                    
+                    self = set_relationship_config(self)
+                    entity1_center,entity2_center,entity_configuration = get_entity_placement(self,slice_shape,x_target,y_target,(w1,h1),(w2,h2))
                     
                     try:
                         template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2,entity_configuration)
