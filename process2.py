@@ -578,6 +578,8 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
     img, entity2_bbox = draw_textbox(self,img,label2,entity2_center,w2,h2)
 
+    # cv2.imwrite(str(self.copyID) +'text.png', img)
+
     try:
         x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration)
     except:
@@ -585,7 +587,17 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
     
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
 
+    # cv2.imwrite(str(self.copyID) +'spline.png', img)
+
     img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
+
+    min_x = int(indicator_bbox[0][0]) - 5
+    min_y = int(indicator_bbox[0][1]) - 5
+    max_x = int(indicator_bbox[1][0]) + 5
+    max_y = int(indicator_bbox[1][1]) + 5
+    indicator_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
+
+    # cv2.imwrite(str(self.copyID) +'indicator.png', img)
 
     # get final relationship bbox by taking max dims of spline and indicator
     min_x = int(min([spline_bbox[0][0],indicator_bbox[0][0]]))
@@ -595,7 +607,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
 
     relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
-    return img,relationship_bbox
+    return img,indicator_bbox
 
 def radial_profile(data, center):
 
@@ -747,8 +759,7 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
 
     return entity1_center, entity2_center, entity_configuration
 
-
-
+# TODO:: add noise to midpoint on arch
 class template_thread(threading.Thread):
     def __init__(self, threadID,name,template_list,directory):
         threading.Thread.__init__(self)
@@ -761,7 +772,7 @@ class template_thread(threading.Thread):
 
         """
 
-        Start 4 threads for generating x# samples from same templates at once 
+        Start 4 threads for generating x# samples from same templates at once
 
         """
 
@@ -815,7 +826,8 @@ def set_relationship_config(self):
     self.base_len = random.randint(10, 20)
     
     self.arrow_placement = random.choice([START, END])
-    self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    # self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    self.arrow_color = (0,0,0)
     # self.text_color = (0,0,0)
     self.indicator = random.choice([INHIBIT, ACTIVATE])
     self.arch_ratio = 0.1
@@ -991,6 +1003,7 @@ class copy_thread(threading.Thread):
 
                     break
 
+            break
             # # TODO:: these boxes do not match with fig
             # template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
             # if relation_idx == 2:
