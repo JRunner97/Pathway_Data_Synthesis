@@ -452,7 +452,7 @@ def get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity
 
     return spline_points
 
-def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration):
+def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration,text1_shape,text2_shape):
 
     """
 
@@ -551,47 +551,96 @@ def checkpoint( h, k, x, y, a, b):
  
     return p
 
-# TODO:: for another ellipse, just sample dir point and move there and keep moving till out of all previous ellipses
-def draw_cluster(self,entity1_center,h1,w1,c_w1,c_h1):
+def get_ellipse(a,b):
 
+    npoints = 1000
+    delta_theta=2.0*math.pi/npoints
 
-    tmp_w1 = math.floor(w1*.80)
-    ellip1_x=[]
-    ellip1_y=[]
+    theta=[0.0]
+    delta_s=[0.0]
+    integ_delta_s=[0.0]
+
+    # integrated probability density
+    integ_delta_s_val=0.0
+
+    for iTheta in range(1,npoints+1):
+        # ds/d(theta):
+        delta_s_val=math.sqrt(a**2*math.sin(iTheta*delta_theta)**2+ \
+                            b**2*math.cos(iTheta*delta_theta)**2)
+
+        theta.append(iTheta*delta_theta)
+        delta_s.append(delta_s_val)
+        # do integral
+        integ_delta_s_val = integ_delta_s_val+delta_s_val*delta_theta
+        integ_delta_s.append(integ_delta_s_val)
+        
+    # normalize integrated ds/d(theta) to make into a scaled CDF (scaled to 2*pi)
+    integ_delta_s_norm = []
+    for iEntry in integ_delta_s:
+        integ_delta_s_norm.append(iEntry/integ_delta_s[-1]*2.0*math.pi)
+
+    ellip_x_prime=[]
+    ellip_y_prime=[]
+
     npoints_new=40
     delta_theta_new=2*math.pi/npoints_new
+
     for theta_index in range(npoints_new):
         theta_val = theta_index*delta_theta_new
-        ellip1_x.append(int(tmp_w1*math.cos(theta_val)))
-        ellip1_y.append(int(h1*math.sin(theta_val)))
 
+        # Do lookup:
+        for lookup_index in range(len(integ_delta_s_norm)):
+            if theta_val >= integ_delta_s_norm[lookup_index] and theta_val < integ_delta_s_norm[lookup_index+1]:
+                theta_prime=theta[lookup_index]
+                break
+        
+        # ellipse with transformation applied
+        ellip_x_prime.append(a*math.cos(theta_prime))
+        ellip_y_prime.append(b*math.sin(theta_prime))
+
+    return ellip_x_prime, ellip_y_prime
+
+# TODO:: for another ellipse, just sample dir point and move there and keep moving till out of all previous ellipses
+def draw_cluster(self,entity1_center,h1,w1,c_h1,c_w1,placed_entities):
+
+
+    # get ellipse 1
+    tmp_w1 = math.floor(w1*.80)
+    ellip1_x,ellip1_y = get_ellipse(tmp_w1,h1)
+
+    # choose random point on ellipse 1
     tmp_idx = random.randint(0,len(ellip1_x)-1)
 
-    wx = c_w1
-    hx = c_h1
-    tmp_w2 = math.floor(wx*.80)
-    ellip2_x=[]
-    ellip2_y=[]
-    npoints_new=300
-    delta_theta_new=2*math.pi/npoints_new
-    for theta_index in range(npoints_new):
-        theta_val = theta_index*delta_theta_new
-        ellip2_x.append(int(tmp_w2*math.cos(theta_val)))
-        ellip2_y.append(int(hx*math.sin(theta_val)))
+
+    # get ellipse to place
+    tmp_w2 = math.floor(c_w1*.80)
+    ellip2_x,ellip2_y = get_ellipse(tmp_w2,c_h1)
+
 
     factor = 1.0
     while True:
         exit_flag = True
+        # loop through all reference points on ellipse to place
         for test_idx in range(len(ellip2_x)):
-            # TODO:: loop thorugh list of existing elipses
 
+            # get updated ellipse to place points
             updated_x = ellip2_x[test_idx]+int(ellip1_x[tmp_idx]*factor)+entity1_center[0]
             updated_y = ellip2_y[test_idx]+int(ellip1_y[tmp_idx]*factor)+entity1_center[1]
-            
-            p = checkpoint(entity1_center[0],entity1_center[1],updated_x,updated_y,tmp_w1,h1)
 
-            if p < 1:
-                exit_flag = False
+            # check if current reference point is in any of placed elipses
+            for entity in placed_entities:
+                ref_center = entity['center']
+                ref_width = math.floor(entity['width']*.80)
+            
+                p = checkpoint(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
+
+                # img = cv2.circle(img, tuple([int(updated_x),int(updated_y)]),2,(0,0,255),1)
+
+                if p < 1:
+                    exit_flag = False
+                    break
+
+            if not exit_flag:
                 break
 
         if exit_flag:
@@ -603,7 +652,7 @@ def draw_cluster(self,entity1_center,h1,w1,c_w1,c_h1):
 
     return new_center
 
-def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2,entity_configuration):
+def draw_relationship(self,img,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape):
 
     """
 
@@ -625,36 +674,49 @@ def draw_relationship(self,img,entity1_center,entity2_center,text1_shape,text2_s
             
     """
 
-    w1,h1 = text1_shape
-    w2,h2 = text2_shape
-
-    # randomly set color
-    self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-    self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
-    img, entity1_bbox, shape_int = draw_textbox(self,img,label1,entity1_center,w1,h1)
-
-    cluster = True
-    if cluster:
-
-        cluster_str_len = np.random.randint(3,7)
-        cluster_label = randomword(cluster_str_len).upper()
-        (c_w1, c_h1), _ = cv2.getTextSize(cluster_label, self.font_style, self.font_size, self.text_thickness)
-
-        new_center = draw_cluster(self,entity1_center,h1,w1,c_w1,c_h1)
+    
+    entity1_bboxes = []
+    # iteratively place cluster entities
+    for current_entitiy in placed_entities1:
 
         self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
-        img, entity1_bbox, shape_int = draw_textbox(self,img,cluster_label,new_center,c_w1,c_h1)
+
+        current_center = [current_entitiy['center'][0] + entity1_center[0],current_entitiy['center'][1] + entity1_center[1]]
+        img, entity1_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
+
+        entity1_bboxes.append(entity1_bbox)
+
+    w1 = text1_shape[0]
+    h1 = text1_shape[1]
+    entity1_bbox = [[int(entity1_center[0]-(w1)),int(entity1_center[1]-(h1))],[int(entity1_center[0]+(w1)),int(entity1_center[1]+(h1))]]
+
+    img = cv2.rectangle(img, tuple(entity1_bbox[0]),tuple(entity1_bbox[1]),(0,255,0),1)
 
 
+    entity2_bboxes = []
+    # iteratively place cluster entities
+    for current_entitiy in placed_entities2:
 
-    # randomly set color
-    self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-    self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
-    img, entity2_bbox, shape_int = draw_textbox(self,img,label2,entity2_center,w2,h2)
+        self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+        self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
+
+        current_center = [current_entitiy['center'][0] + entity2_center[0],current_entitiy['center'][1] + entity2_center[1]]
+        img, entity2_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
+
+        entity2_bboxes.append(entity2_bbox)
+
+    w2 = text2_shape[0]
+    h2 = text2_shape[1]
+    entity2_bbox = [[int(entity2_center[0]-(w2)),int(entity2_center[1]-(h2))],[int(entity2_center[0]+(w2)),int(entity2_center[1]+(h2))]]
+
+    img = cv2.rectangle(img, tuple(entity2_bbox[0]),tuple(entity2_bbox[1]),(0,0,255),1)
+
+
+    # force anchors to be outside of cluster bboxes
 
     try:
-        x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration)
+        x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration,text1_shape,text2_shape)
     except:
         raise ValueError
     
@@ -920,6 +982,77 @@ def set_text_config(self):
 
     return self
 
+def get_entities(self,num_entities):
+
+    # TODO:: work out cluster here
+    # get cluster entities to place
+    c_entities = []
+    for c_idx in range(num_entities):
+        c_entity = {}
+        cluster_str_len = np.random.randint(3,7)
+        cluster_label = randomword(cluster_str_len).upper()
+        c_entity['label'] = cluster_label
+        (c_w1, c_h1), _ = cv2.getTextSize(cluster_label, self.font_style, self.font_size, self.text_thickness)
+        c_entity['width'] = c_w1
+        c_entity['height'] = c_h1
+        c_entity['center'] = [0,0]
+        
+        c_entities.append(copy.deepcopy(c_entity))
+
+
+    placed_entities = [c_entities[0]]
+    entity1 = c_entities[0]
+
+    for current_entitiy in c_entities[1:]:
+
+        new_center = draw_cluster(self,entity1['center'],entity1['height'],entity1['width'],current_entitiy['height'],current_entitiy['width'],placed_entities)
+        current_entitiy['center'] = new_center
+        placed_entities.append(current_entitiy)
+
+
+    # get shape of cluster
+    # TODO:: recalculate center and adjust relative centers
+    min_x = 10000
+    max_x = -10000
+    min_y = 100000
+    max_y = -100000
+    sum_x = 0
+    sum_y = 0
+    for entity in c_entities:
+        
+        tmp_min_x = entity['center'][0] - ((entity['width']*.8)/2)
+        tmp_max_x = entity['center'][0] + ((entity['width']*.8)/2) 
+
+        tmp_min_y = entity['center'][1] - (entity['height']/2)
+        tmp_max_y = entity['center'][1] + (entity['height']/2) 
+
+        if tmp_min_x < min_x:
+            min_x = tmp_min_x
+        if tmp_min_y < min_y:
+            min_y = tmp_min_y
+        if tmp_max_x > max_x:
+            max_x = tmp_max_x
+        if tmp_max_y > max_y:
+            max_y = tmp_max_y
+
+        sum_x += entity['center'][0]
+        sum_y += entity['center'][1]
+
+    # adjust reference from first entity to relative center of cluster
+    avg_x = sum_x / len(c_entities)
+    avg_y = sum_y / len(c_entities)
+    for idx in range(len(c_entities)):
+        c_entities[idx]['center'][0] = int(c_entities[idx]['center'][0] - avg_x)
+        c_entities[idx]['center'][1] = int(c_entities[idx]['center'][1] - avg_y)
+        
+    
+    w1 = int(abs(min_x) + abs(max_x))
+    h1 = int(abs(min_y) + abs(max_y))
+    text_shape = [w1,h1]
+
+    return placed_entities, text_shape
+
+
 class copy_thread(threading.Thread):
     def __init__(self,copyID,name,directory,filename):
         threading.Thread.__init__(self)
@@ -970,17 +1103,23 @@ class copy_thread(threading.Thread):
             # TODO:: include more dynamic variations of textbox (oval, no textbox)
             # TODO:: dynamically change indicator length and width
 
+            label1 = "BA"
+            label2 = "OHI"
+
             self = set_text_config(self)
 
-            tmp_str_len = np.random.randint(3,7)
-            label1 = randomword(tmp_str_len).upper()
-            tmp_str_len = np.random.randint(3,7)
-            label2 = randomword(tmp_str_len).upper()
+            num_entities = np.random.randint(2,4)
+            placed_entities1, text1_shape = get_entities(self,num_entities)
+            w1 = text1_shape[0]
+            h1 = text1_shape[1]
 
-            (w1, h1), _ = cv2.getTextSize(label1, self.font_style, self.font_size, self.text_thickness)
-            (w2, h2), _ = cv2.getTextSize(label2, self.font_style, self.font_size, self.text_thickness)
-            text1_shape = [w1,h1]
-            text2_shape = [w2,h2]
+            num_entities = 1
+            placed_entities2, text2_shape = get_entities(self,num_entities)
+            w2 = text2_shape[0]
+            h2 = text2_shape[1]
+
+
+
 
             # TODO:: set y_dim params based on x_dim value
             # TODO:: set these values to be dependent of dims of text to place (i.e. make sure box is big enough for them)
@@ -1005,7 +1144,7 @@ class copy_thread(threading.Thread):
                     entity1_center,entity2_center,entity_configuration = get_entity_placement(self,slice_shape,x_target,y_target,(w1,h1),(w2,h2))
                     
                     try:
-                        template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,text1_shape,text2_shape,label1,label2,entity_configuration)
+                        template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
                     except:
                         continue
 
@@ -1074,7 +1213,7 @@ def populate_figures():
 
     """
 
-    Start multiple threads for generating samples from 4 different templates at once 
+    Start multiple threads for generating samples from 4 different templates at once
 
     """
 
