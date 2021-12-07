@@ -452,7 +452,7 @@ def get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity
 
     return spline_points
 
-def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration,text1_shape,text2_shape):
+def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration):
 
     """
 
@@ -676,48 +676,65 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
     
     entity1_bboxes = []
+    w1 = text1_shape[0]
+    h1 = text1_shape[1]
     # iteratively place cluster entities
     for current_entitiy in placed_entities1:
 
         self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
-        current_center = [current_entitiy['center'][0] + entity1_center[0],current_entitiy['center'][1] + entity1_center[1]]
+        current_center = [current_entitiy['center'][0] + entity1_center[0] - int(w1/2),current_entitiy['center'][1] + entity1_center[1] - int(h1/2)]
         img, entity1_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
 
         entity1_bboxes.append(entity1_bbox)
 
+        # img = cv2.rectangle(img, tuple([int(current_center[0]-current_entitiy['width']*.8),current_center[1]-current_entitiy['height']]),tuple([int(current_center[0]+current_entitiy['width']*.8),current_center[1]+current_entitiy['height']]),(255,0,0),1)
+
+    # img = cv2.circle(img,tuple(entity1_center),2,(255,0,0),1)
+
     w1 = text1_shape[0]
     h1 = text1_shape[1]
-    entity1_bbox = [[int(entity1_center[0]-(w1)),int(entity1_center[1]-(h1))],[int(entity1_center[0]+(w1)),int(entity1_center[1]+(h1))]]
+    entity1_bbox = [[int(entity1_center[0]-(w1/2)),int(entity1_center[1]-(h1/2))],[int(entity1_center[0]+(w1/2)),int(entity1_center[1]+(h1/2))]]
 
-    img = cv2.rectangle(img, tuple(entity1_bbox[0]),tuple(entity1_bbox[1]),(0,255,0),1)
+    # img = cv2.rectangle(img, tuple([entity1_center[0] - int(w1/2),entity1_center[1] - int(h1/2)]),tuple([entity1_center[0] + int(w1/2),entity1_center[1] + int(h1/2)]),(0,255,0),1)
+
+
+
 
 
     entity2_bboxes = []
+    w2 = text2_shape[0]
+    h2 = text2_shape[1]
     # iteratively place cluster entities
     for current_entitiy in placed_entities2:
 
         self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
-        current_center = [current_entitiy['center'][0] + entity2_center[0],current_entitiy['center'][1] + entity2_center[1]]
+        current_center = [current_entitiy['center'][0] + entity2_center[0] - int(w2/2),current_entitiy['center'][1] + entity2_center[1] - int(h2/2)]
         img, entity2_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
 
         entity2_bboxes.append(entity2_bbox)
 
+        # img = cv2.rectangle(img, tuple([int(current_center[0]-current_entitiy['width']*.8),current_center[1]-current_entitiy['height']]),tuple([int(current_center[0]+current_entitiy['width']*.8),current_center[1]+current_entitiy['height']]),(255,0,0),1)
+
+    # img = cv2.circle(img,tuple(entity2_center),2,(255,0,0),1)
+
     w2 = text2_shape[0]
     h2 = text2_shape[1]
-    entity2_bbox = [[int(entity2_center[0]-(w2)),int(entity2_center[1]-(h2))],[int(entity2_center[0]+(w2)),int(entity2_center[1]+(h2))]]
+    entity2_bbox = [[int(entity2_center[0]-(w2/2)),int(entity2_center[1]-(h2/2))],[int(entity2_center[0]+(w2/2)),int(entity2_center[1]+(h2/2))]]
 
-    img = cv2.rectangle(img, tuple(entity2_bbox[0]),tuple(entity2_bbox[1]),(0,0,255),1)
+    # img = cv2.rectangle(img, tuple([entity2_center[0] - int(w2/2),entity2_center[1] - int(h2/2)]),tuple([entity2_center[0] + int(w2/2),entity2_center[1] + int(h2/2)]),(0,255,0),1)
+
 
 
     # force anchors to be outside of cluster bboxes
 
     try:
-        x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration,text1_shape,text2_shape)
-    except:
+        x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration)
+    except Exception as e:
+        print(e)
         raise ValueError
     
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
@@ -982,7 +999,7 @@ def set_text_config(self):
 
     return self
 
-def get_entities(self,num_entities):
+def get_entities(self,num_entities,img):
 
     # TODO:: work out cluster here
     # get cluster entities to place
@@ -1020,11 +1037,13 @@ def get_entities(self,num_entities):
     sum_y = 0
     for entity in c_entities:
         
-        tmp_min_x = entity['center'][0] - ((entity['width']*.8)/2)
-        tmp_max_x = entity['center'][0] + ((entity['width']*.8)/2) 
+        tmp_min_x = entity['center'][0] - ((entity['width']*.8))
+        tmp_max_x = entity['center'][0] + ((entity['width']*.8)) 
 
-        tmp_min_y = entity['center'][1] - (entity['height']/2)
-        tmp_max_y = entity['center'][1] + (entity['height']/2) 
+        tmp_min_y = entity['center'][1] - (entity['height'])
+        tmp_max_y = entity['center'][1] + (entity['height']) 
+
+
 
         if tmp_min_x < min_x:
             min_x = tmp_min_x
@@ -1038,19 +1057,19 @@ def get_entities(self,num_entities):
         sum_x += entity['center'][0]
         sum_y += entity['center'][1]
 
-    # adjust reference from first entity to relative center of cluster
+    # adjust reference from first entity to top-left corner
     avg_x = sum_x / len(c_entities)
     avg_y = sum_y / len(c_entities)
     for idx in range(len(c_entities)):
-        c_entities[idx]['center'][0] = int(c_entities[idx]['center'][0] - avg_x)
-        c_entities[idx]['center'][1] = int(c_entities[idx]['center'][1] - avg_y)
+        c_entities[idx]['center'][0] = int(c_entities[idx]['center'][0] + abs(min_x))
+        c_entities[idx]['center'][1] = int(c_entities[idx]['center'][1] + abs(min_y))
         
     
     w1 = int(abs(min_x) + abs(max_x))
     h1 = int(abs(min_y) + abs(max_y))
     text_shape = [w1,h1]
 
-    return placed_entities, text_shape
+    return placed_entities, text_shape, img
 
 
 class copy_thread(threading.Thread):
@@ -1108,13 +1127,13 @@ class copy_thread(threading.Thread):
 
             self = set_text_config(self)
 
-            num_entities = np.random.randint(2,4)
-            placed_entities1, text1_shape = get_entities(self,num_entities)
+            num_entities = np.random.randint(1,4)
+            placed_entities1, text1_shape,template_im = get_entities(self,num_entities,template_im)
             w1 = text1_shape[0]
             h1 = text1_shape[1]
 
-            num_entities = 1
-            placed_entities2, text2_shape = get_entities(self,num_entities)
+            num_entities = np.random.randint(1,4)
+            placed_entities2, text2_shape,template_im = get_entities(self,num_entities,template_im)
             w2 = text2_shape[0]
             h2 = text2_shape[1]
 
@@ -1198,7 +1217,7 @@ class copy_thread(threading.Thread):
             # template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
             # if relation_idx == 2:
             #     break
-            break
+            # break
 
         # save json and new image
         im_dir = "output_test"
