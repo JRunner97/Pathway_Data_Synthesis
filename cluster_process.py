@@ -675,21 +675,24 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     """
 
     
-    entity1_bboxes = []
     w1 = text1_shape[0]
     h1 = text1_shape[1]
     # iteratively place cluster entities
-    for current_entitiy in placed_entities1:
+    for idx in range(len(placed_entities1)):
+
+        current_entitiy = placed_entities1[idx]
 
         self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
         current_center = [current_entitiy['center'][0] + entity1_center[0] - int(w1/2),current_entitiy['center'][1] + entity1_center[1] - int(h1/2)]
-        img, entity1_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
+        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
 
-        entity1_bboxes.append(entity1_bbox)
+        placed_entities1[idx]['bbox'] = tmp_bbox
 
         # img = cv2.rectangle(img, tuple([int(current_center[0]-current_entitiy['width']*.8),current_center[1]-current_entitiy['height']]),tuple([int(current_center[0]+current_entitiy['width']*.8),current_center[1]+current_entitiy['height']]),(255,0,0),1)
+        # img = cv2.rectangle(img, tuple([tmp_bbox[0][0],tmp_bbox[0][1]]),tuple([tmp_bbox[1][0],tmp_bbox[1][1]]),(255,0,0),1)
+
 
     # img = cv2.circle(img,tuple(entity1_center),2,(255,0,0),1)
 
@@ -703,19 +706,20 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
 
 
-    entity2_bboxes = []
     w2 = text2_shape[0]
     h2 = text2_shape[1]
     # iteratively place cluster entities
-    for current_entitiy in placed_entities2:
+    for idx in range(len(placed_entities2)):
+
+        current_entitiy = placed_entities2[idx]
 
         self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
         current_center = [current_entitiy['center'][0] + entity2_center[0] - int(w2/2),current_entitiy['center'][1] + entity2_center[1] - int(h2/2)]
-        img, entity2_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
+        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
 
-        entity2_bboxes.append(entity2_bbox)
+        placed_entities2[idx]['bbox'] = tmp_bbox
 
         # img = cv2.rectangle(img, tuple([int(current_center[0]-current_entitiy['width']*.8),current_center[1]-current_entitiy['height']]),tuple([int(current_center[0]+current_entitiy['width']*.8),current_center[1]+current_entitiy['height']]),(255,0,0),1)
 
@@ -755,7 +759,10 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
     relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
-    return img,indicator_bbox
+    # img = cv2.rectangle(img, tuple([indicator_bbox[0][0],indicator_bbox[0][1]]),tuple([indicator_bbox[2][0],indicator_bbox[2][1]]),(255,0,0),1)
+
+
+    return img,indicator_bbox,placed_entities1,placed_entities2
 
 def radial_profile(data, center):
 
@@ -991,7 +998,7 @@ def set_text_config(self):
 
     self.font_style = random.choice(font_style_list)
     self.font_size = random.randint(5, 8) * 0.1
-    self.text_margin = random.randint(5, 15)
+    self.text_margin = random.randint(5, 6)
     self.text_thickness = random.randint(1, 2)
     self.textbox_background = (0,0,230)
     self.textbox_border_thickness = random.randint(0, 2)
@@ -1072,6 +1079,7 @@ def get_entities(self,num_entities,img):
     return placed_entities, text_shape, img
 
 
+# TODO:: don't have text_margin effect bbox annotation for text
 class copy_thread(threading.Thread):
     def __init__(self,copyID,name,directory,filename):
         threading.Thread.__init__(self)
@@ -1163,41 +1171,71 @@ class copy_thread(threading.Thread):
                     entity1_center,entity2_center,entity_configuration = get_entity_placement(self,slice_shape,x_target,y_target,(w1,h1),(w2,h2))
                     
                     try:
-                        template_im,relationship_bbox = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
+                        template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
                     except:
                         continue
 
-                    # generate annotation
-                    label1_x1 = math.floor(entity1_center[0] - (text1_shape[0]/2))
-                    label1_y1 = math.floor(entity1_center[1] - (text1_shape[1]/2))
-                    label1_x2 = math.ceil(entity1_center[0] + (text1_shape[0]/2))
-                    label1_y2 = math.ceil(entity1_center[1] + (text1_shape[1]/2))
-                    label1_bbox = [[label1_x1,label1_y1],[label1_x2,label1_y1],[label1_x2,label1_y2],[label1_x1,label1_y2]]
+                    shapes_1 = []
+                    for entity in placed_entities1:
 
-                    label2_x1 = math.floor(entity2_center[0] - (text2_shape[0]/2))
-                    label2_y1 = math.floor(entity2_center[1] - (text2_shape[1]/2))
-                    label2_x2 = math.ceil(entity2_center[0] + (text2_shape[0]/2))
-                    label2_y2 = math.ceil(entity2_center[1] + (text2_shape[1]/2))
-                    label2_bbox = [[label2_x1,label2_y1],[label2_x2,label2_y1],[label2_x2,label2_y2],[label2_x1,label2_y2]]
+                        min_x = entity['bbox'][0][0]
+                        min_y = entity['bbox'][0][1]
+                        max_x = entity['bbox'][1][0]
+                        max_y = entity['bbox'][1][1]
+                        label1_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
-                    label1_shape = copy.deepcopy(base_shape)
-                    label1_shape['points'] = label1_bbox
-                    label1_shape['ID'] = element_indx
-                    label1_shape['label'] = str(element_indx) + ":gene:" + label1
-                    element_indx += 1
+                        label1_shape = copy.deepcopy(base_shape)
+                        label1_shape['points'] = label1_bbox
+                        label1_shape['ID'] = element_indx
+                        label1_shape['label'] = str(element_indx) + ":gene:" + entity['label']
+                        element_indx += 1
+                        shapes_1.append(label1_shape)
 
-                    label2_shape = copy.deepcopy(base_shape)
-                    label2_shape['points'] = label2_bbox
-                    label2_shape['ID'] = element_indx
-                    label2_shape['label'] = str(element_indx) + ":gene:" + label2
-                    element_indx += 1
+                    shapes_2 = []
+                    for entity in placed_entities2:
+
+                        min_x = entity['bbox'][0][0]
+                        min_y = entity['bbox'][0][1]
+                        max_x = entity['bbox'][1][0]
+                        max_y = entity['bbox'][1][1]
+                        label2_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
+
+
+                        label2_shape = copy.deepcopy(base_shape)
+                        label2_shape['points'] = label2_bbox
+                        label2_shape['ID'] = element_indx
+                        label2_shape['label'] = str(element_indx) + ":gene:" + entity['label']
+                        element_indx += 1
+                        shapes_2.append(label2_shape)
+
+
+
+                    shapes_1_str = '['
+                    if len(shapes_1) == 1:
+                        shapes_1_str = str(shapes_1[0]['ID'])
+                    else:
+                        for shape in shapes_1:
+                            shapes_1_str = shapes_1_str + str(shape['ID']) + ','
+                        shapes_1_str = shapes_1_str[:-1] + ']'
+
+
+                    shapes_2_str = '['
+                    if len(shapes_2) == 1:
+                        shapes_2_str = str(shapes_2[0]['ID'])
+                    else:
+                        for shape in shapes_2:
+                            shapes_2_str = shapes_2_str + str(shape['ID']) + ','
+                        shapes_2_str = shapes_2_str[:-1] + ']'
+
 
                     if self.arrow_placement == START:
-                        id2id_str = str(label2_shape['ID']) + "|" + str(label1_shape['ID'])
+                        id2id_str = shapes_2_str + "|" + shapes_1_str
                     else:
-                        id2id_str = str(label1_shape['ID']) + "|" + str(label2_shape['ID'])
+                        id2id_str = shapes_1_str + "|" + shapes_2_str
 
-                    # TODO:: change order label1 and label2 based on arrow pos
+
+
+
                     indicator_shape = copy.deepcopy(base_shape)
                     indicator_shape['points'] = relationship_bbox
                     indicator_shape['ID'] = element_indx
@@ -1207,8 +1245,12 @@ class copy_thread(threading.Thread):
                         indicator_shape['label'] = str(element_indx) + ":activate:" + id2id_str
                     element_indx += 1
 
-                    shapes.append(label1_shape)
-                    shapes.append(label2_shape)
+
+                    # TODO:: loop through each shape
+                    for shape in shapes_1:
+                        shapes.append(shape)
+                    for shape in shapes_2:
+                        shapes.append(shape)
                     shapes.append(indicator_shape)
 
                     break
