@@ -10,6 +10,7 @@ import math
 import string
 import random
 from scipy import stats
+import skimage.draw as draw
 
 X_ORIENTATION = 0
 Y_ORIENTATION = 1
@@ -33,6 +34,9 @@ LONG = 0
 TALL = 1
 DOWN_SLASH = 2
 UP_SLASH = 3
+
+ELLIPSE = 0
+RECT = 1
 
 
 def randomword(length):
@@ -338,7 +342,13 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
     return img, indicator_bbox
 
 
-def draw_textbox(self,img,label,location,w,h):
+def draw_textbox(self,img,current_entitiy,location):
+
+    # self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height']
+
+    label = current_entitiy['label']
+    w = current_entitiy['width']
+    h = current_entitiy['height']
 
     """
 
@@ -362,6 +372,13 @@ def draw_textbox(self,img,label,location,w,h):
     x1 = location[0] - math.floor(w/2) - self.text_margin
     y1 = location[1] - math.floor(h/2) - self.text_margin
 
+    if current_entitiy['type'] == ELLIPSE:
+        img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
+    elif current_entitiy['type'] == RECT:
+        img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
+    #     if np.random.randint(2):
+    #         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
+
     # case 1: rectangle
     # case 2: ellipse
     # case 3: no shape
@@ -371,7 +388,7 @@ def draw_textbox(self,img,label,location,w,h):
     #     if np.random.randint(2):
     #         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
     # elif shape_int == 1:
-    img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
+    # img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
     # if np.random.randint(2):
     #     img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, (0,0,0), self.textbox_border_thickness)
     
@@ -542,7 +559,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
 
     return x_span,y_span
 
-def checkpoint( h, k, x, y, a, b):
+def check_ellipse_point( h, k, x, y, a, b):
  
     # checking the equation of
     # ellipse with the given point
@@ -550,6 +567,15 @@ def checkpoint( h, k, x, y, a, b):
          (math.pow((y - k), 2) / math.pow(b, 2)))
  
     return p
+
+def check_rect_point(h, k, x, y, a, b):
+
+    # ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height']
+
+    if x < h+(a/2) and x > h-(a/2) and y < k+(b/2) and y > k-(b/2):
+        return 0
+    else:
+        return 1
 
 def get_ellipse(a,b):
 
@@ -600,41 +626,69 @@ def get_ellipse(a,b):
 
     return ellip_x_prime, ellip_y_prime
 
+def get_square(a,b):
+    rows,cols = draw.rectangle(tuple([0,0]),tuple([0+a,0+b]))
+    rows = rows.flatten()
+    cols = cols.flatten()
+
+    max_y = np.amax(rows)
+    max_x = np.amax(cols)
+    center = [max_x/2,max_y/2]
+
+    rows = rows - center[1]
+    cols = cols - center[0]
+
+    return rows, cols
+
 # TODO:: for another ellipse, just sample dir point and move there and keep moving till out of all previous ellipses
-def draw_cluster(self,entity1_center,h1,w1,c_h1,c_w1,placed_entities):
+def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
+
+    entity1_center = entity1['center']
+    h1 = entity1['height']
+    w1 = entity1['width']
+    c_h1 = current_entitiy['height']
+    c_w1 = current_entitiy['width']
 
 
-    # get ellipse 1
+    # get shape 1 and 2
     tmp_w1 = math.floor(w1*.80)
-    ellip1_x,ellip1_y = get_ellipse(tmp_w1,h1)
-
-    # choose random point on ellipse 1
-    tmp_idx = random.randint(0,len(ellip1_x)-1)
-
-
-    # get ellipse to place
     tmp_w2 = math.floor(c_w1*.80)
-    ellip2_x,ellip2_y = get_ellipse(tmp_w2,c_h1)
+    if entity1['type'] == ELLIPSE:
+        shape1_x,shape1_y = get_ellipse(tmp_w1,h1)
+    elif entity1['type'] == RECT:
+        shape1_x,shape1_y = get_square(tmp_w1,h1)
+
+    if current_entitiy['type'] == ELLIPSE:
+        shape2_x,shape2_y = get_ellipse(tmp_w2,c_h1)
+    elif current_entitiy['type'] == RECT:
+        shape2_x,shape2_y = get_square(tmp_w2,c_h1)
 
 
+    tmp_idx = random.randint(0,len(shape1_x)-1)
     factor = 1.0
     while True:
         exit_flag = True
         # loop through all reference points on ellipse to place
-        for test_idx in range(len(ellip2_x)):
+        for test_idx in range(len(shape2_x)):
 
             # get updated ellipse to place points
-            updated_x = ellip2_x[test_idx]+int(ellip1_x[tmp_idx]*factor)+entity1_center[0]
-            updated_y = ellip2_y[test_idx]+int(ellip1_y[tmp_idx]*factor)+entity1_center[1]
+            updated_x = shape2_x[test_idx]+int(shape1_x[tmp_idx]*factor)+entity1_center[0]
+            updated_y = shape2_y[test_idx]+int(shape1_y[tmp_idx]*factor)+entity1_center[1]
 
             # check if current reference point is in any of placed elipses
             for entity in placed_entities:
                 ref_center = entity['center']
                 ref_width = math.floor(entity['width']*.80)
             
-                p = checkpoint(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
+                if entity['type'] == ELLIPSE:
+                    p = check_ellipse_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
+                elif entity['type'] == RECT:
+                    p = check_rect_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
 
-                # img = cv2.circle(img, tuple([int(updated_x),int(updated_y)]),2,(0,0,255),1)
+                img = cv2.circle(img, tuple([int(ref_center[0]+updated_x),int(ref_center[1]+updated_y)]),2,(0,0,255),1)
+
+                cv2.imshow('image',img)
+                cv2.waitKey(0)
 
                 if p < 1:
                     exit_flag = False
@@ -648,7 +702,7 @@ def draw_cluster(self,entity1_center,h1,w1,c_h1,c_w1,placed_entities):
 
         factor += 0.1
 
-    new_center = [int(ellip1_x[tmp_idx]*factor)+entity1_center[0],int(ellip1_y[tmp_idx]*factor)+entity1_center[1]]
+    new_center = [int(shape1_x[tmp_idx]*factor)+entity1_center[0],int(shape1_y[tmp_idx]*factor)+entity1_center[1]]
 
     return new_center
 
@@ -686,7 +740,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
         current_center = [current_entitiy['center'][0] + entity1_center[0] - int(w1/2),current_entitiy['center'][1] + entity1_center[1] - int(h1/2)]
-        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
+        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy,current_center)
 
         placed_entities1[idx]['bbox'] = tmp_bbox
 
@@ -717,7 +771,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
         current_center = [current_entitiy['center'][0] + entity2_center[0] - int(w2/2),current_entitiy['center'][1] + entity2_center[1] - int(h2/2)]
-        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height'])
+        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy,current_center)
 
         placed_entities2[idx]['bbox'] = tmp_bbox
 
@@ -811,7 +865,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
             
     """
 
-    threshold = 50
+    threshold = 30
 
     template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
@@ -1020,6 +1074,7 @@ def get_entities(self,num_entities,img):
         c_entity['width'] = c_w1
         c_entity['height'] = c_h1
         c_entity['center'] = [0,0]
+        c_entity['type'] = RECT
         
         c_entities.append(copy.deepcopy(c_entity))
 
@@ -1029,7 +1084,8 @@ def get_entities(self,num_entities,img):
 
     for current_entitiy in c_entities[1:]:
 
-        new_center = draw_cluster(self,entity1['center'],entity1['height'],entity1['width'],current_entitiy['height'],current_entitiy['width'],placed_entities)
+        # new_center = draw_cluster(self,entity1['center'],entity1['height'],entity1['width'],current_entitiy['height'],current_entitiy['width'],placed_entities)
+        new_center = draw_cluster(self,entity1,current_entitiy,placed_entities,img)
         current_entitiy['center'] = new_center
         placed_entities.append(current_entitiy)
 
@@ -1120,7 +1176,7 @@ class copy_thread(threading.Thread):
             "shape_type": "polygon",
             "flags": {}
         }
-        for relation_idx in range(30):
+        for relation_idx in range(50):
 
             # change to remove setting CORNER
             # make each entity config has set of possible arrows (eg. hotog has line and arch/ square has line, arch, and corner)
@@ -1135,12 +1191,12 @@ class copy_thread(threading.Thread):
 
             self = set_text_config(self)
 
-            num_entities = np.random.randint(1,4)
+            num_entities = np.random.randint(1,3)
             placed_entities1, text1_shape,template_im = get_entities(self,num_entities,template_im)
             w1 = text1_shape[0]
             h1 = text1_shape[1]
 
-            num_entities = np.random.randint(1,4)
+            num_entities = np.random.randint(1,3)
             placed_entities2, text2_shape,template_im = get_entities(self,num_entities,template_im)
             w2 = text2_shape[0]
             h2 = text2_shape[1]
@@ -1156,7 +1212,7 @@ class copy_thread(threading.Thread):
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
-            for idx in range(50):
+            for idx in range(500):
 
                 # subtracted max bounds to ensure valid coords
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
@@ -1259,7 +1315,7 @@ class copy_thread(threading.Thread):
             # template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
             # if relation_idx == 2:
             #     break
-            # break
+            break
 
         # save json and new image
         im_dir = "output_test"
