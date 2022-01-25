@@ -344,6 +344,12 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
 def draw_textbox(self,img,current_entitiy,location):
 
+    '''
+    
+    location is shape center
+    
+    '''
+
     # self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height']
 
     label = current_entitiy['label']
@@ -369,6 +375,7 @@ def draw_textbox(self,img,current_entitiy,location):
     """
 
     # location is center
+    # x1,y1 is top left corner
     x1 = location[0] - math.floor(w/2) - self.text_margin
     y1 = location[1] - math.floor(h/2) - self.text_margin
 
@@ -376,6 +383,7 @@ def draw_textbox(self,img,current_entitiy,location):
         img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
     elif current_entitiy['type'] == RECT:
         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
+        print('hi')
     #     if np.random.randint(2):
     #         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
 
@@ -397,6 +405,7 @@ def draw_textbox(self,img,current_entitiy,location):
     # to add boarder just do same rectangle but don't fill and can just make it to include optionally
     # putText takes coordinates of the bottom-left corner of the text string
     img = cv2.putText(img, label, (x1 + self.text_margin, y1 + h + self.text_margin), self.font_style, self.font_size, self.text_color, self.text_thickness)
+    # img = cv2.putText(img, label, (x1, y1 + h), self.font_style, self.font_size, self.text_color, self.text_thickness)
 
     bbox = [[x1,y1],[x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)]]
 
@@ -626,8 +635,11 @@ def get_ellipse(a,b):
 
     return ellip_x_prime, ellip_y_prime
 
-def get_square(a,b):
-    rows,cols = draw.rectangle(tuple([0,0]),tuple([0+a,0+b]))
+def get_square(self,a,b):
+
+    # + (self.text_margin*2)
+
+    rows,cols = draw.rectangle_perimeter(tuple([0,0]),tuple([a+(self.text_margin*2),b+(self.text_margin*2)]))
     rows = rows.flatten()
     cols = cols.flatten()
 
@@ -656,12 +668,17 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
     if entity1['type'] == ELLIPSE:
         shape1_x,shape1_y = get_ellipse(tmp_w1,h1)
     elif entity1['type'] == RECT:
-        shape1_x,shape1_y = get_square(tmp_w1,h1)
+        shape1_x,shape1_y = get_square(self,tmp_w1,h1)
 
     if current_entitiy['type'] == ELLIPSE:
         shape2_x,shape2_y = get_ellipse(tmp_w2,c_h1)
     elif current_entitiy['type'] == RECT:
-        shape2_x,shape2_y = get_square(tmp_w2,c_h1)
+        shape2_x,shape2_y = get_square(self,tmp_w2,c_h1)
+
+    # low_corner = [int(entity1_center[0]-(tmp_w1/2)+500),int(entity1_center[1]-(h1/2)+500)]
+    # high_corner = [int(entity1_center[0]+(tmp_w1/2)+500),int(entity1_center[1]+(h1/2)+500)]
+    # img = cv2.rectangle(img, tuple(low_corner), tuple(high_corner), self.textbox_background, 1)
+    # img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
 
 
     tmp_idx = random.randint(0,len(shape1_x)-1)
@@ -678,17 +695,18 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
             # check if current reference point is in any of placed elipses
             for entity in placed_entities:
                 ref_center = entity['center']
-                ref_width = math.floor(entity['width']*.80)
             
                 if entity['type'] == ELLIPSE:
+                    ref_width = math.floor(entity['width']*.80)
                     p = check_ellipse_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
                 elif entity['type'] == RECT:
-                    p = check_rect_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
+                    ref_width = entity['width'] + self.text_margin*2
+                    p = check_rect_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height']+(self.text_margin*2))
 
-                img = cv2.circle(img, tuple([int(ref_center[0]+updated_x),int(ref_center[1]+updated_y)]),2,(0,0,255),1)
+                # img = cv2.circle(img, tuple([int(updated_x+500),int(updated_y+500)]),2,(0,255,0),1)
 
-                cv2.imshow('image',img)
-                cv2.waitKey(0)
+                # cv2.imshow('image',img)
+                # cv2.waitKey(0)
 
                 if p < 1:
                     exit_flag = False
@@ -701,6 +719,9 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
             break
 
         factor += 0.1
+
+    # cv2.imshow('image',img)
+    # cv2.waitKey(0)
 
     new_center = [int(shape1_x[tmp_idx]*factor)+entity1_center[0],int(shape1_y[tmp_idx]*factor)+entity1_center[1]]
 
@@ -1082,6 +1103,10 @@ def get_entities(self,num_entities,img):
     placed_entities = [c_entities[0]]
     entity1 = c_entities[0]
 
+
+    # entity1['center'] = [500,500] 
+
+
     for current_entitiy in c_entities[1:]:
 
         # new_center = draw_cluster(self,entity1['center'],entity1['height'],entity1['width'],current_entitiy['height'],current_entitiy['width'],placed_entities)
@@ -1191,15 +1216,33 @@ class copy_thread(threading.Thread):
 
             self = set_text_config(self)
 
-            num_entities = np.random.randint(1,3)
+            num_entities = np.random.randint(1,4)
+            # text shape is actually cluster shape dimensions
             placed_entities1, text1_shape,template_im = get_entities(self,num_entities,template_im)
             w1 = text1_shape[0]
             h1 = text1_shape[1]
 
-            num_entities = np.random.randint(1,3)
+            num_entities = np.random.randint(1,4)
             placed_entities2, text2_shape,template_im = get_entities(self,num_entities,template_im)
             w2 = text2_shape[0]
             h2 = text2_shape[1]
+
+
+            for my_entity in placed_entities1:
+
+                entity1_center = my_entity['center']
+                h1 = my_entity['height']
+                w1 = my_entity['width']
+
+                # get shape 1 and 2
+                tmp_w1 = math.floor(w1*.80)
+
+                low_corner = [int(entity1_center[0]-(tmp_w1/2)+500+self.text_margin),int(entity1_center[1]-(h1/2)+500+self.text_margin)]
+                high_corner = [int(entity1_center[0]+(tmp_w1/2)+500+self.text_margin),int(entity1_center[1]+(h1/2)+500+self.text_margin)]
+                template_im = cv2.rectangle(template_im, tuple(low_corner), tuple(high_corner), self.textbox_background, 1)
+
+            cv2.imshow('image',template_im)
+            cv2.waitKey(0)
 
 
 
@@ -1215,6 +1258,13 @@ class copy_thread(threading.Thread):
             for idx in range(500):
 
                 # subtracted max bounds to ensure valid coords
+
+                #// low>= high value error
+                print(self.padding)
+                print(slice_shape)
+                print(template_im.shape)
+                print(0+self.padding)
+                print(template_im.shape[1]-slice_shape[0]-self.padding)
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
                 y_target = np.random.randint(0+self.padding,template_im.shape[0]-slice_shape[1]-self.padding)
                 
