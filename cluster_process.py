@@ -383,7 +383,7 @@ def draw_textbox(self,img,current_entitiy,location):
         img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
     elif current_entitiy['type'] == RECT:
         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
-        print('hi')
+        # print('hi')
     #     if np.random.randint(2):
     #         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
 
@@ -663,8 +663,11 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
 
 
     # get shape 1 and 2
-    tmp_w1 = math.floor(w1*.80)
-    tmp_w2 = math.floor(c_w1*.80)
+    # TODO:: ellipse vs rect
+    # tmp_w1 = math.floor(w1*.80)
+    # tmp_w2 = math.floor(c_w1*.80)
+    tmp_w1 = w1
+    tmp_w2 = c_w1
     if entity1['type'] == ELLIPSE:
         shape1_x,shape1_y = get_ellipse(tmp_w1,h1)
     elif entity1['type'] == RECT:
@@ -886,7 +889,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
             
     """
 
-    threshold = 30
+    threshold = 10
 
     template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
@@ -911,6 +914,10 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
     bin_means = stats.binned_statistic(idx, radial_prof, 'mean', bins=4)[0]
     
     if bin_means[-1] < threshold and bin_means[-2] < threshold:
+        # cv2.imshow('image2',template_im)
+        # cv2.waitKey(0)
+        # cv2.imshow('image',template_slice)
+        # cv2.waitKey(0)
         return True
     else:
         return False
@@ -948,6 +955,7 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
     if dim_ratio > 1.67:
         # LONG
         entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
+        # TODO:: i think the problem is the use of box width and height is changed w/ context of text_margin in different areas
         entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
 
         entity2_center_y = math.floor(slice_shape[1] / 2) + y_target
@@ -1058,7 +1066,8 @@ def set_relationship_config(self):
     self.base_len = random.randint(10, 20)
     
     self.arrow_placement = random.choice([START, END])
-    self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    # self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    self.arrow_color = (0, 0, 0)
     # self.text_color = (0,0,0)
     self.indicator = random.choice([INHIBIT, ACTIVATE])
     self.arch_ratio = 0.1
@@ -1124,9 +1133,14 @@ def get_entities(self,num_entities,img):
     sum_x = 0
     sum_y = 0
     for entity in c_entities:
-        
-        tmp_min_x = entity['center'][0] - ((entity['width']*.8))
-        tmp_max_x = entity['center'][0] + ((entity['width']*.8)) 
+        # TODO:: 
+
+
+        # tmp_min_x = entity['center'][0] - ((entity['width']*.8))
+        # tmp_max_x = entity['center'][0] + ((entity['width']*.8)) 
+
+        tmp_min_x = entity['center'][0] - ((entity['width']))
+        tmp_max_x = entity['center'][0] + ((entity['width'])) 
 
         tmp_min_y = entity['center'][1] - (entity['height'])
         tmp_max_y = entity['center'][1] + (entity['height']) 
@@ -1216,17 +1230,19 @@ class copy_thread(threading.Thread):
 
             self = set_text_config(self)
 
-            num_entities = np.random.randint(1,4)
+            num_entities = np.random.randint(1,5)
             # text shape is actually cluster shape dimensions
             placed_entities1, text1_shape,template_im = get_entities(self,num_entities,template_im)
             w1 = text1_shape[0]
             h1 = text1_shape[1]
 
-            num_entities = np.random.randint(1,4)
+            num_entities = np.random.randint(1,5)
             placed_entities2, text2_shape,template_im = get_entities(self,num_entities,template_im)
             w2 = text2_shape[0]
             h2 = text2_shape[1]
 
+
+            template_im2 = copy.deepcopy(template_im)
 
             for my_entity in placed_entities1:
 
@@ -1235,13 +1251,16 @@ class copy_thread(threading.Thread):
                 w1 = my_entity['width']
 
                 # get shape 1 and 2
-                tmp_w1 = math.floor(w1*.80)
+                # tmp_w1 = math.floor(w1*.80)
+                tmp_w1 = math.floor(w1)
 
-                low_corner = [int(entity1_center[0]-(tmp_w1/2)+500+self.text_margin),int(entity1_center[1]-(h1/2)+500+self.text_margin)]
+                low_corner = [int(entity1_center[0]-(tmp_w1/2)+500-self.text_margin),int(entity1_center[1]-(h1/2)+500-self.text_margin)]
                 high_corner = [int(entity1_center[0]+(tmp_w1/2)+500+self.text_margin),int(entity1_center[1]+(h1/2)+500+self.text_margin)]
-                template_im = cv2.rectangle(template_im, tuple(low_corner), tuple(high_corner), self.textbox_background, 1)
+                # template_im2 = cv2.rectangle(template_im2, tuple(low_corner), tuple(high_corner), self.textbox_background, 1)
 
-            cv2.imshow('image',template_im)
+                # img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
+
+            cv2.imshow('image',template_im2)
             cv2.waitKey(0)
 
 
@@ -1255,21 +1274,19 @@ class copy_thread(threading.Thread):
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
-            for idx in range(500):
+            for idx in range(50):
 
                 # subtracted max bounds to ensure valid coords
 
                 #// low>= high value error
-                print(self.padding)
-                print(slice_shape)
-                print(template_im.shape)
-                print(0+self.padding)
-                print(template_im.shape[1]-slice_shape[0]-self.padding)
+                # top left corner target
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
                 y_target = np.random.randint(0+self.padding,template_im.shape[0]-slice_shape[1]-self.padding)
                 
                 # check if selected template area is good
                 if check_slice(template_im,slice_shape,x_target,y_target,self.padding):
+
+                    template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
 
                     self.spline_type = LINE
 
@@ -1280,6 +1297,9 @@ class copy_thread(threading.Thread):
                         template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
                     except:
                         continue
+
+                    # cv2.imshow('image3',template_im)
+                    # cv2.waitKey(0)
 
                     shapes_1 = []
                     for entity in placed_entities1:
@@ -1365,7 +1385,7 @@ class copy_thread(threading.Thread):
             # template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
             # if relation_idx == 2:
             #     break
-            break
+            # break
 
         # save json and new image
         im_dir = "output_test"
