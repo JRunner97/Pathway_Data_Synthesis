@@ -653,7 +653,6 @@ def get_square(self,a,b):
 
     return rows, cols
 
-# TODO:: for another ellipse, just sample dir point and move there and keep moving till out of all previous ellipses
 def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
 
     entity1_center = entity1['center']
@@ -664,11 +663,17 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
 
 
     # get shape 1 and 2
-    # TODO:: ellipse vs rect
-    # tmp_w1 = math.floor(w1*.80)
-    # tmp_w2 = math.floor(c_w1*.80)
-    tmp_w1 = w1
-    tmp_w2 = c_w1
+    if entity1['type'] == RECT:
+        tmp_w1 = w1
+    elif entity1['type'] == ELLIPSE:
+        tmp_w1 = math.floor(w1*.80)
+
+    if current_entitiy['type'] == RECT:
+        tmp_w2 = c_w1
+    elif current_entitiy['type'] == ELLIPSE:
+        tmp_w2 = math.floor(c_w1*.80)
+
+
     if entity1['type'] == ELLIPSE:
         shape1_x,shape1_y = get_ellipse(tmp_w1,h1)
     elif entity1['type'] == RECT:
@@ -967,10 +972,12 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
     # 4 configurations/positioning: hotdog, hamburger, square1, square2
     dim_ratio = slice_shape[0] / slice_shape[1]
     if dim_ratio > 1.67:
+
+        # print('cluster width')
+        # print(w1)
+
         # LONG
         entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
-
-        # TODO:: i think the problem is the use of box width and height is changed w/ context of text_margin in different areas
         entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
 
         # template_im = cv2.circle(template_im, (entity1_center_x,entity1_center_y), math.floor(w1/2), self.arrow_color, -1)  
@@ -1117,7 +1124,6 @@ def set_text_config(self):
 
 def get_entities(self,num_entities,img):
 
-    # TODO:: work out cluster here
     # get cluster entities to place
     c_entities = []
     for c_idx in range(num_entities):
@@ -1129,7 +1135,7 @@ def get_entities(self,num_entities,img):
         c_entity['width'] = c_w1
         c_entity['height'] = c_h1
         c_entity['center'] = [0,0]
-        c_entity['type'] = RECT
+        c_entity['type'] = random.choice([RECT, ELLIPSE])
         
         c_entities.append(copy.deepcopy(c_entity))
 
@@ -1158,17 +1164,22 @@ def get_entities(self,num_entities,img):
     sum_x = 0
     sum_y = 0
     for entity in c_entities:
-        # TODO:: 
+        # TODO:: FURTHER INVESITGATE DIFFERENCE here
+        # it causes slight gap to walls w/ ellipses from text margin that is not seen in rectangles
+        # look at /2 vs *.8 to fix
+        # TODO:: another problem with elipses in vertical configurations bleeding over wall
+        if entity['type'] == RECT:
+            tmp_min_x = entity['center'][0] - (entity['width']/2)
+            tmp_max_x = entity['center'][0] + (entity['width']/2)
 
-
-        # tmp_min_x = entity['center'][0] - ((entity['width']*.8))
-        # tmp_max_x = entity['center'][0] + ((entity['width']*.8)) 
-
-        tmp_min_x = entity['center'][0] - ((entity['width']/2))
-        tmp_max_x = entity['center'][0] + ((entity['width']/2)) 
+        elif entity['type'] == ELLIPSE:
+            tmp_min_x = entity['center'][0] - ((entity['width']*.8))
+            tmp_max_x = entity['center'][0] + ((entity['width']*.8)) 
 
         tmp_min_y = entity['center'][1] - (entity['height']/2)
         tmp_max_y = entity['center'][1] + (entity['height']/2) 
+
+        
 
 
 
@@ -1267,35 +1278,11 @@ class copy_thread(threading.Thread):
             h2 = text2_shape[1]
 
 
-            # template_im2 = copy.deepcopy(template_im)
-
-            # for my_entity in placed_entities1:
-
-            #     entity1_center = my_entity['center']
-            #     h1 = my_entity['height']
-            #     w1 = my_entity['width']
-
-            #     # get shape 1 and 2
-            #     # tmp_w1 = math.floor(w1*.80)
-            #     tmp_w1 = math.floor(w1)
-
-            #     low_corner = [int(entity1_center[0]-(tmp_w1/2)+500-self.text_margin),int(entity1_center[1]-(h1/2)+500-self.text_margin)]
-            #     high_corner = [int(entity1_center[0]+(tmp_w1/2)+500+self.text_margin),int(entity1_center[1]+(h1/2)+500+self.text_margin)]
-                # template_im2 = cv2.rectangle(template_im2, tuple(low_corner), tuple(high_corner), self.textbox_background, 1)
-
-                # img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
-
-            # cv2.imshow('image',template_im2)
-            # cv2.waitKey(0)
-
-
-
-
             # TODO:: set y_dim params based on x_dim value
             # TODO:: set these values to be dependent of dims of text to place (i.e. make sure box is big enough for them)
             # if we want to base y_dim off x_dim, then do we want one to be biased large if the other is small and vice versa?
-            x_dim = np.random.randint(100,250) + w1 + w2
-            y_dim = np.random.randint(100,250) + h1 + h2
+            x_dim = np.random.randint(100,200) + w1 + w2
+            y_dim = np.random.randint(100,200) + h1 + h2
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
@@ -1315,7 +1302,7 @@ class copy_thread(threading.Thread):
 
                     # template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
-                    template_im = cv2.rectangle(template_im, (x_target-self.padding, y_target-self.padding), (x_target+x_dim+self.padding, y_target+y_dim+self.padding), (0,0,0), 1)
+                    # template_im = cv2.rectangle(template_im, (x_target-self.padding, y_target-self.padding), (x_target+x_dim+self.padding, y_target+y_dim+self.padding), (0,0,0), 1)
                     # rows,cols = draw.rectangle_perimeter((x_target-self.padding, y_target-self.padding),(x_target+x_dim+self.padding, y_target+y_dim+self.padding))
 
                     self.spline_type = LINE
@@ -1410,6 +1397,7 @@ class copy_thread(threading.Thread):
                     shapes.append(indicator_shape)
 
                     break
+            # break
 
             # # TODO:: these boxes do not match with fig
             # template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
