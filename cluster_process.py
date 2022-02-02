@@ -11,6 +11,7 @@ import string
 import random
 from scipy import stats
 import skimage.draw as draw
+import matplotlib.pyplot as plt
 
 X_ORIENTATION = 0
 Y_ORIENTATION = 1
@@ -867,6 +868,9 @@ def radial_profile(data, center):
     # normalize by distance to center, since as radius grows the # of pixels in radius bin does also
     nr = np.bincount(r.ravel())
     radialprofile = tbin / nr
+
+    radialprofile = radialprofile * 255
+
     return radialprofile 
 
 
@@ -893,7 +897,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
 
     template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
-    # if all pixels are the same, then don't even have to run the rest of check 
+    # if all pixels are the same, then don't even have to run the rest of check
     if np.all(template_slice == template_slice[0,0,0]):
         return True
 
@@ -901,6 +905,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
     f = np.fft.fft2(grey_slice)
     fshift = np.fft.fftshift(f)
     magnitude_spectrum = 20*np.log(np.abs(fshift))
+    magnitude_spectrum *= 1.0 / magnitude_spectrum.max() 
 
     # x,y format
     center = (int(slice_shape[1] / 2),int(slice_shape[0] / 2))
@@ -912,18 +917,27 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
 
     idx = range(0,radial_prof.shape[0])
     bin_means = stats.binned_statistic(idx, radial_prof, 'mean', bins=4)[0]
-    
+
+    # cv2.imshow('image',template_slice)
+    # cv2.waitKey(0)
+
+    # cv2.imshow('grey image',grey_slice)
+    # cv2.waitKey(0)
+
+    # cv2.imshow('image2',magnitude_spectrum)
+    # cv2.waitKey(0)
+
+    # xs = np.array(range(radial_prof.shape[0]))
+    # plt.plot(xs, radial_prof)
+    # plt.show()
+
     if bin_means[-1] < threshold and bin_means[-2] < threshold:
-        # cv2.imshow('image2',template_im)
-        # cv2.waitKey(0)
-        # cv2.imshow('image',template_slice)
-        # cv2.waitKey(0)
         return True
     else:
         return False
 
                     
-def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_shape):
+def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_shape,template_im):
 
     """
 
@@ -955,22 +969,33 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
     if dim_ratio > 1.67:
         # LONG
         entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
+
         # TODO:: i think the problem is the use of box width and height is changed w/ context of text_margin in different areas
         entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
 
-        entity2_center_y = math.floor(slice_shape[1] / 2) + y_target
+        # template_im = cv2.circle(template_im, (entity1_center_x,entity1_center_y), math.floor(w1/2), self.arrow_color, -1)  
+
+        # template_im = cv2.circle(template_im, (x_target,y_target), 20, self.arrow_color, -1)  
+
+        entity2_center_y = entity1_center_y
         entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
 
+
+
         entity_configuration = LONG
+
+
     elif dim_ratio < .6:
         # TALL
         entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
         entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
 
-        entity2_center_x = math.floor(slice_shape[0] / 2) + x_target
+        entity2_center_x = entity1_center_x
         entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
 
         entity_configuration = TALL
+
+
     else:
         # DOWN_SLASH
         if np.random.randint(2):
@@ -995,7 +1020,7 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
     entity1_center = [entity1_center_x,entity1_center_y]
     entity2_center = [entity2_center_x,entity2_center_y]
 
-    return entity1_center, entity2_center, entity_configuration
+    return entity1_center, entity2_center, entity_configuration,template_im
 
 
 
@@ -1031,31 +1056,31 @@ class template_thread(threading.Thread):
                 break
 
             child_thread0 = copy_thread(child_thread_idx,"child0",self.directory,filename)
-            # child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
-            # child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
-            # child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
+            child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
+            child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
+            child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
 
             child_thread0.start()
-            # if (copy_idx*4) + 1 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread1.start()
-            # if (copy_idx*4) + 2 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread2.start()
-            # if (copy_idx*4) + 3 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread3.start()
+            if (copy_idx*4) + 1 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread1.start()
+            if (copy_idx*4) + 2 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread2.start()
+            if (copy_idx*4) + 3 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread3.start()
 
             child_thread0.join()
-            # child_thread1.join()
-            # child_thread2.join()
-            # child_thread3.join()
+            child_thread1.join()
+            child_thread2.join()
+            child_thread3.join()
             break
 
 def set_relationship_config(self):
@@ -1139,11 +1164,11 @@ def get_entities(self,num_entities,img):
         # tmp_min_x = entity['center'][0] - ((entity['width']*.8))
         # tmp_max_x = entity['center'][0] + ((entity['width']*.8)) 
 
-        tmp_min_x = entity['center'][0] - ((entity['width']))
-        tmp_max_x = entity['center'][0] + ((entity['width'])) 
+        tmp_min_x = entity['center'][0] - ((entity['width']/2))
+        tmp_max_x = entity['center'][0] + ((entity['width']/2)) 
 
-        tmp_min_y = entity['center'][1] - (entity['height'])
-        tmp_max_y = entity['center'][1] + (entity['height']) 
+        tmp_min_y = entity['center'][1] - (entity['height']/2)
+        tmp_max_y = entity['center'][1] + (entity['height']/2) 
 
 
 
@@ -1242,26 +1267,26 @@ class copy_thread(threading.Thread):
             h2 = text2_shape[1]
 
 
-            template_im2 = copy.deepcopy(template_im)
+            # template_im2 = copy.deepcopy(template_im)
 
-            for my_entity in placed_entities1:
+            # for my_entity in placed_entities1:
 
-                entity1_center = my_entity['center']
-                h1 = my_entity['height']
-                w1 = my_entity['width']
+            #     entity1_center = my_entity['center']
+            #     h1 = my_entity['height']
+            #     w1 = my_entity['width']
 
-                # get shape 1 and 2
-                # tmp_w1 = math.floor(w1*.80)
-                tmp_w1 = math.floor(w1)
+            #     # get shape 1 and 2
+            #     # tmp_w1 = math.floor(w1*.80)
+            #     tmp_w1 = math.floor(w1)
 
-                low_corner = [int(entity1_center[0]-(tmp_w1/2)+500-self.text_margin),int(entity1_center[1]-(h1/2)+500-self.text_margin)]
-                high_corner = [int(entity1_center[0]+(tmp_w1/2)+500+self.text_margin),int(entity1_center[1]+(h1/2)+500+self.text_margin)]
+            #     low_corner = [int(entity1_center[0]-(tmp_w1/2)+500-self.text_margin),int(entity1_center[1]-(h1/2)+500-self.text_margin)]
+            #     high_corner = [int(entity1_center[0]+(tmp_w1/2)+500+self.text_margin),int(entity1_center[1]+(h1/2)+500+self.text_margin)]
                 # template_im2 = cv2.rectangle(template_im2, tuple(low_corner), tuple(high_corner), self.textbox_background, 1)
 
                 # img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
 
-            cv2.imshow('image',template_im2)
-            cv2.waitKey(0)
+            # cv2.imshow('image',template_im2)
+            # cv2.waitKey(0)
 
 
 
@@ -1269,8 +1294,8 @@ class copy_thread(threading.Thread):
             # TODO:: set y_dim params based on x_dim value
             # TODO:: set these values to be dependent of dims of text to place (i.e. make sure box is big enough for them)
             # if we want to base y_dim off x_dim, then do we want one to be biased large if the other is small and vice versa?
-            x_dim = np.random.randint(100,300) + w1 + w2
-            y_dim = np.random.randint(100,300) + h1 + h2
+            x_dim = np.random.randint(100,250) + w1 + w2
+            y_dim = np.random.randint(100,250) + h1 + h2
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
@@ -1280,18 +1305,23 @@ class copy_thread(threading.Thread):
 
                 #// low>= high value error
                 # top left corner target
+                # print(template_im.shape)
+                # print(slice_shape)
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
                 y_target = np.random.randint(0+self.padding,template_im.shape[0]-slice_shape[1]-self.padding)
                 
                 # check if selected template area is good
                 if check_slice(template_im,slice_shape,x_target,y_target,self.padding):
 
-                    template_im = cv2.rectangle(template_im, (x_target, y_target), (x_target+x_dim, y_target+y_dim), (0,0,0), 1)
+                    # template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
+
+                    template_im = cv2.rectangle(template_im, (x_target-self.padding, y_target-self.padding), (x_target+x_dim+self.padding, y_target+y_dim+self.padding), (0,0,0), 1)
+                    # rows,cols = draw.rectangle_perimeter((x_target-self.padding, y_target-self.padding),(x_target+x_dim+self.padding, y_target+y_dim+self.padding))
 
                     self.spline_type = LINE
 
                     self = set_relationship_config(self)
-                    entity1_center,entity2_center,entity_configuration = get_entity_placement(self,slice_shape,x_target,y_target,(w1,h1),(w2,h2))
+                    entity1_center,entity2_center,entity_configuration,template_im = get_entity_placement(self,slice_shape,x_target,y_target,(w1,h1),(w2,h2),template_im)
                     
                     try:
                         template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
@@ -1419,31 +1449,31 @@ def populate_figures():
             break
 
         thread0 = template_thread(template_idx,"thread-0",template_list,directory)
-        # thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
-        # thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
-        # thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
+        thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
+        thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
+        thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
 
         thread0.start()
-        # if template_idx + 1 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread1.start()
-        # if template_idx + 2 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread2.start()
-        # if template_idx + 3 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread3.start()
+        if template_idx + 1 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread1.start()
+        if template_idx + 2 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread2.start()
+        if template_idx + 3 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread3.start()
 
         thread0.join()
-        # thread1.join()
-        # thread2.join()
-        # thread3.join()
+        thread1.join()
+        thread2.join()
+        thread3.join()
         break
 
 if __name__ == "__main__":
