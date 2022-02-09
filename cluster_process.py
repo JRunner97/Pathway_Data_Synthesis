@@ -27,6 +27,8 @@ RIGHT = 3
 
 INHIBIT = 0
 ACTIVATE = 1
+INDIRECT_INHIBIT = 2
+INDIRECT_ACTIVATE = 3
 
 LINE = 0
 ARCH = 1
@@ -184,6 +186,14 @@ def draw_spline(self,img,x_span,y_span):
     base_points_y = base_points[:,1]
     min_y = np.min(base_points_y)
     max_y = np.max(base_points_y)
+
+    # dashed interval dependent on spline width
+    if self.indicator == INDIRECT_ACTIVATE or self.indicator == INDIRECT_INHIBIT:
+        arr_len = base_points.shape[0]
+        base_interval = random.randint(5, 15)
+        intervals = base_interval + 3 * self.thickness
+        odd_out = arr_len % intervals
+        base_points = base_points[:arr_len-odd_out,:].reshape(-1,intervals,2)[::2].reshape(-1,2)
 
     spline_bbox = [[min_x,min_y],[max_x,max_y]]
 
@@ -394,24 +404,7 @@ def draw_textbox(self,img,current_entitiy,location):
         if np.random.randint(2):
             border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
             img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), border_color, self.textbox_border_thickness)
-        
-    # case 1: rectangle
-    # case 2: ellipse
-    # case 3: no shape
-    # if shape_int == 0:
-    #     img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
-    #     if np.random.randint(2):
-    #         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
-    # elif shape_int == 1:
-    # img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
-    # if np.random.randint(2):
-    #     img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, (0,0,0), self.textbox_border_thickness)
-    
 
-    # places text
-    # to add boarder just do same rectangle but don't fill and can just make it to include optionally
-    # putText takes coordinates of the bottom-left corner of the text string
-    # img = cv2.putText(img, label, (x1 + self.text_margin, y1 + h + self.text_margin), self.font_style, self.font_size, self.text_color, self.text_thickness)
 
     b,g,r,a = 0,255,0,0
     img_pil = Image.fromarray(img)
@@ -1114,7 +1107,7 @@ def set_relationship_config(self):
     # self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     self.arrow_color = (0, 0, 0)
     # self.text_color = (0,0,0)
-    self.indicator = random.choice([INHIBIT, ACTIVATE])
+    self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.arch_ratio = 0.1
     self.spline_type = LINE
 
@@ -1398,8 +1391,12 @@ class copy_thread(threading.Thread):
                     indicator_shape['ID'] = element_indx
                     if self.indicator == INHIBIT:
                         indicator_shape['label'] = str(element_indx) + ":inhibit:" + id2id_str
-                    else:
+                    elif self.indicator == ACTIVATE:
                         indicator_shape['label'] = str(element_indx) + ":activate:" + id2id_str
+                    elif self.indicator == INDIRECT_ACTIVATE:
+                        indicator_shape['label'] = str(element_indx) + ":indirect_activate:" + id2id_str
+                    else:
+                        indicator_shape['label'] = str(element_indx) + ":indirect_inhibit:" + id2id_str
                     element_indx += 1
 
 
