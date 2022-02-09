@@ -12,6 +12,7 @@ import random
 from scipy import stats
 import skimage.draw as draw
 import matplotlib.pyplot as plt
+from PIL import ImageFont, ImageDraw, Image
 
 X_ORIENTATION = 0
 Y_ORIENTATION = 1
@@ -38,6 +39,7 @@ UP_SLASH = 3
 
 ELLIPSE = 0
 RECT = 1
+NO_SHAPE = 2
 
 
 def randomword(length):
@@ -375,23 +377,27 @@ def draw_textbox(self,img,current_entitiy,location):
             
     """
 
+    # TODO:: make sure perimeter of anchor points takess text_margin context
+
     # location is center
     # x1,y1 is top left corner
-    x1 = location[0] - math.floor(w/2) - self.text_margin
-    y1 = location[1] - math.floor(h/2) - self.text_margin
+    x1 = location[0] - int(round(w/2)) - self.text_margin
+    y1 = location[1] - int(round(h/2)) - self.text_margin
 
     if current_entitiy['type'] == ELLIPSE:
-        img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
+        img = cv2.ellipse(img, tuple(location), (int(round(w*.80)),h), 0, 0, 360, self.textbox_background, -1)
+        if np.random.randint(2):
+            border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+            img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, border_color, self.textbox_border_thickness)
     elif current_entitiy['type'] == RECT:
         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
-        # print('hi')
-    #     if np.random.randint(2):
-    #         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), (0,0,0), self.textbox_border_thickness)
-
+        if np.random.randint(2):
+            border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+            img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), border_color, self.textbox_border_thickness)
+        
     # case 1: rectangle
     # case 2: ellipse
     # case 3: no shape
-    shape_int = np.random.randint(3)
     # if shape_int == 0:
     #     img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
     #     if np.random.randint(2):
@@ -405,13 +411,21 @@ def draw_textbox(self,img,current_entitiy,location):
     # places text
     # to add boarder just do same rectangle but don't fill and can just make it to include optionally
     # putText takes coordinates of the bottom-left corner of the text string
-    img = cv2.putText(img, label, (x1 + self.text_margin, y1 + h + self.text_margin), self.font_style, self.font_size, self.text_color, self.text_thickness)
-    # img = cv2.putText(img, label, (x1, y1 + h), self.font_style, self.font_size, self.text_color, self.text_thickness)
+    # img = cv2.putText(img, label, (x1 + self.text_margin, y1 + h + self.text_margin), self.font_style, self.font_size, self.text_color, self.text_thickness)
+
+    b,g,r,a = 0,255,0,0
+    img_pil = Image.fromarray(img)
+    draw = ImageDraw.Draw(img_pil)
+    draw.text((x1 + self.text_margin, y1 + h + self.text_margin), label, font=current_entitiy['font'], fill=self.text_color, anchor='lb')
+    img = np.array(img_pil)
 
     bbox = [[x1,y1],[x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)]]
 
+    # cv2.imshow('image3',img)
+    # cv2.waitKey(0)
 
-    return img, bbox, shape_int
+
+    return img, bbox
 
 def get_arch_anchors(self,start_point,end_point):
 
@@ -663,12 +677,12 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
 
 
     # get shape 1 and 2
-    if entity1['type'] == RECT:
+    if entity1['type'] == RECT or entity1['type'] == NO_SHAPE:
         tmp_w1 = w1
     elif entity1['type'] == ELLIPSE:
         tmp_w1 = math.floor(w1*.80)
 
-    if current_entitiy['type'] == RECT:
+    if current_entitiy['type'] == RECT or current_entitiy['type'] == NO_SHAPE:
         tmp_w2 = c_w1
     elif current_entitiy['type'] == ELLIPSE:
         tmp_w2 = math.floor(c_w1*.80)
@@ -676,12 +690,12 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
 
     if entity1['type'] == ELLIPSE:
         shape1_x,shape1_y = get_ellipse(tmp_w1,h1)
-    elif entity1['type'] == RECT:
+    elif entity1['type'] == RECT or entity1['type'] == NO_SHAPE:
         shape1_x,shape1_y = get_square(self,tmp_w1,h1)
 
     if current_entitiy['type'] == ELLIPSE:
         shape2_x,shape2_y = get_ellipse(tmp_w2,c_h1)
-    elif current_entitiy['type'] == RECT:
+    elif current_entitiy['type'] == RECT or current_entitiy['type'] == NO_SHAPE:
         shape2_x,shape2_y = get_square(self,tmp_w2,c_h1)
 
     # low_corner = [int(entity1_center[0]-(tmp_w1/2)+500),int(entity1_center[1]-(h1/2)+500)]
@@ -708,7 +722,7 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
                 if entity['type'] == ELLIPSE:
                     ref_width = math.floor(entity['width']*.80)
                     p = check_ellipse_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
-                elif entity['type'] == RECT:
+                elif entity['type'] == RECT or entity['type'] == NO_SHAPE:
                     ref_width = entity['width'] + self.text_margin*2
                     p = check_rect_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height']+(self.text_margin*2))
 
@@ -770,7 +784,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
         current_center = [current_entitiy['center'][0] + entity1_center[0] - int(w1/2),current_entitiy['center'][1] + entity1_center[1] - int(h1/2)]
-        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy,current_center)
+        img, tmp_bbox = draw_textbox(self,img,current_entitiy,current_center)
 
         placed_entities1[idx]['bbox'] = tmp_bbox
 
@@ -801,7 +815,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
         self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
 
         current_center = [current_entitiy['center'][0] + entity2_center[0] - int(w2/2),current_entitiy['center'][1] + entity2_center[1] - int(h2/2)]
-        img, tmp_bbox, shape_int = draw_textbox(self,img,current_entitiy,current_center)
+        img, tmp_bbox = draw_textbox(self,img,current_entitiy,current_center)
 
         placed_entities2[idx]['bbox'] = tmp_bbox
 
@@ -961,7 +975,6 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
             entity2_center (list): contains target center of entity2 bbox as [entity2_center_x,entity2_center_y]
             text1_shape (list): contains target dimensions of text to place as [w1,h1]
             text2_shape (list): contains target dimensions of text to place as [w2,h2]
-            
     """
 
     # For the text background
@@ -1063,37 +1076,37 @@ class template_thread(threading.Thread):
                 break
 
             child_thread0 = copy_thread(child_thread_idx,"child0",self.directory,filename)
-            child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
-            child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
-            child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
+            # child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
+            # child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
+            # child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
 
             child_thread0.start()
-            if (copy_idx*4) + 1 > num_copies:
-                stop_child_flag = True
-                continue
-            else:
-                child_thread1.start()
-            if (copy_idx*4) + 2 > num_copies:
-                stop_child_flag = True
-                continue
-            else:
-                child_thread2.start()
-            if (copy_idx*4) + 3 > num_copies:
-                stop_child_flag = True
-                continue
-            else:
-                child_thread3.start()
+            # if (copy_idx*4) + 1 > num_copies:
+            #     stop_child_flag = True
+            #     continue
+            # else:
+            #     child_thread1.start()
+            # if (copy_idx*4) + 2 > num_copies:
+            #     stop_child_flag = True
+            #     continue
+            # else:
+            #     child_thread2.start()
+            # if (copy_idx*4) + 3 > num_copies:
+            #     stop_child_flag = True
+            #     continue
+            # else:
+            #     child_thread3.start()
 
             child_thread0.join()
-            child_thread1.join()
-            child_thread2.join()
-            child_thread3.join()
+            # child_thread1.join()
+            # child_thread2.join()
+            # child_thread3.join()
             break
 
 def set_relationship_config(self):
     
-    self.padding = 0
-    self.thickness = random.randint(2, 4)
+    self.padding = 30
+    self.thickness = random.randint(1, 3)
     self.tip_len = random.randint(5, 15)
     self.base_len = random.randint(10, 20)
     
@@ -1109,12 +1122,13 @@ def set_relationship_config(self):
 
 def set_text_config(self):
 
-    font_style_list = [cv2.FONT_HERSHEY_SIMPLEX, cv2.QT_FONT_NORMAL, cv2.FONT_HERSHEY_TRIPLEX,
-                           cv2.FONT_HERSHEY_DUPLEX]
-
+    self.font_folder = "font_folder"
+    font_style_list = os.listdir(self.font_folder)
     self.font_style = random.choice(font_style_list)
-    self.font_size = random.randint(5, 8) * 0.1
-    self.text_margin = random.randint(5, 6)
+
+    self.font_size = random.randint(8, 20)
+    # self.font_size = random.randint(5, 8) * 0.1
+    self.text_margin = random.randint(0, 15)
     self.text_thickness = random.randint(1, 2)
     self.textbox_background = (0,0,230)
     self.textbox_border_thickness = random.randint(0, 2)
@@ -1130,12 +1144,18 @@ def get_entities(self,num_entities,img):
         c_entity = {}
         cluster_str_len = np.random.randint(3,7)
         cluster_label = randomword(cluster_str_len).upper()
+
+        # load font and get text size
+        fontpath = os.path.join(self.font_folder, self.font_style)    
+        font = ImageFont.truetype(fontpath, self.font_size)
+        (c_w1, c_h1) = font.getsize(cluster_label)
+
         c_entity['label'] = cluster_label
-        (c_w1, c_h1), _ = cv2.getTextSize(cluster_label, self.font_style, self.font_size, self.text_thickness)
+        c_entity['font'] = font
         c_entity['width'] = c_w1
         c_entity['height'] = c_h1
         c_entity['center'] = [0,0]
-        c_entity['type'] = random.choice([RECT, ELLIPSE])
+        c_entity['type'] = random.choice([RECT, ELLIPSE, NO_SHAPE])
         
         c_entities.append(copy.deepcopy(c_entity))
 
@@ -1144,12 +1164,8 @@ def get_entities(self,num_entities,img):
     entity1 = c_entities[0]
 
 
-    # entity1['center'] = [500,500] 
-
-
     for current_entitiy in c_entities[1:]:
 
-        # new_center = draw_cluster(self,entity1['center'],entity1['height'],entity1['width'],current_entitiy['height'],current_entitiy['width'],placed_entities)
         new_center = draw_cluster(self,entity1,current_entitiy,placed_entities,img)
         current_entitiy['center'] = new_center
         placed_entities.append(current_entitiy)
@@ -1168,7 +1184,7 @@ def get_entities(self,num_entities,img):
         # it causes slight gap to walls w/ ellipses from text margin that is not seen in rectangles
         # look at /2 vs *.8 to fix
         # TODO:: another problem with elipses in vertical configurations bleeding over wall
-        if entity['type'] == RECT:
+        if entity['type'] == RECT or entity['type'] == NO_SHAPE:
             tmp_min_x = entity['center'][0] - (entity['width']/2)
             tmp_max_x = entity['center'][0] + (entity['width']/2)
 
@@ -1178,9 +1194,6 @@ def get_entities(self,num_entities,img):
 
         tmp_min_y = entity['center'][1] - (entity['height']/2)
         tmp_max_y = entity['center'][1] + (entity['height']/2) 
-
-        
-
 
 
         if tmp_min_x < min_x:
@@ -1261,18 +1274,18 @@ class copy_thread(threading.Thread):
             # TODO:: include more dynamic variations of textbox (oval, no textbox)
             # TODO:: dynamically change indicator length and width
 
-            label1 = "BA"
-            label2 = "OHI"
 
             self = set_text_config(self)
 
-            num_entities = np.random.randint(1,5)
+            num_entities = np.random.randint(1,3)
+            # num_entities = 1
             # text shape is actually cluster shape dimensions
             placed_entities1, text1_shape,template_im = get_entities(self,num_entities,template_im)
             w1 = text1_shape[0]
             h1 = text1_shape[1]
 
-            num_entities = np.random.randint(1,5)
+            num_entities = np.random.randint(1,3)
+            # num_entities = 1
             placed_entities2, text2_shape,template_im = get_entities(self,num_entities,template_im)
             w2 = text2_shape[0]
             h2 = text2_shape[1]
@@ -1281,8 +1294,8 @@ class copy_thread(threading.Thread):
             # TODO:: set y_dim params based on x_dim value
             # TODO:: set these values to be dependent of dims of text to place (i.e. make sure box is big enough for them)
             # if we want to base y_dim off x_dim, then do we want one to be biased large if the other is small and vice versa?
-            x_dim = np.random.randint(100,200) + w1 + w2
-            y_dim = np.random.randint(100,200) + h1 + h2
+            x_dim = np.random.randint(100,150) + w1 + w2
+            y_dim = np.random.randint(100,150) + h1 + h2
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
@@ -1312,7 +1325,8 @@ class copy_thread(threading.Thread):
                     
                     try:
                         template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
-                    except:
+                    except Exception as e: 
+                        print(e)
                         continue
 
                     # cv2.imshow('image3',template_im)
@@ -1437,31 +1451,31 @@ def populate_figures():
             break
 
         thread0 = template_thread(template_idx,"thread-0",template_list,directory)
-        thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
-        thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
-        thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
+        # thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
+        # thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
+        # thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
 
         thread0.start()
-        if template_idx + 1 > len(template_list):
-            stop_flag = True
-            continue
-        else:
-            thread1.start()
-        if template_idx + 2 > len(template_list):
-            stop_flag = True
-            continue
-        else:
-            thread2.start()
-        if template_idx + 3 > len(template_list):
-            stop_flag = True
-            continue
-        else:
-            thread3.start()
+        # if template_idx + 1 > len(template_list):
+        #     stop_flag = True
+        #     continue
+        # else:
+        #     thread1.start()
+        # if template_idx + 2 > len(template_list):
+        #     stop_flag = True
+        #     continue
+        # else:
+        #     thread2.start()
+        # if template_idx + 3 > len(template_list):
+        #     stop_flag = True
+        #     continue
+        # else:
+        #     thread3.start()
 
         thread0.join()
-        thread1.join()
-        thread2.join()
-        thread3.join()
+        # thread1.join()
+        # thread2.join()
+        # thread3.join()
         break
 
 if __name__ == "__main__":
