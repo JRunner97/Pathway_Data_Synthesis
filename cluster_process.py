@@ -796,7 +796,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
     w1 = text1_shape[0]
     h1 = text1_shape[1]
-    entity1_bbox = [[int(entity1_center[0]-(w1/2)),int(entity1_center[1]-(h1/2))],[int(entity1_center[0]+(w1/2)),int(entity1_center[1]+(h1/2))]]
+    entity1_bbox = [[int(entity1_center[0]-(w1/2))-self.text_margin,int(entity1_center[1]-(h1/2))-self.text_margin],[int(entity1_center[0]+(w1/2)+self.text_margin),int(entity1_center[1]+(h1/2))+self.text_margin]]
 
     # img = cv2.rectangle(img, tuple([entity1_center[0] - int(w1/2),entity1_center[1] - int(h1/2)]),tuple([entity1_center[0] + int(w1/2),entity1_center[1] + int(h1/2)]),(0,255,0),1)
 
@@ -825,7 +825,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
     w2 = text2_shape[0]
     h2 = text2_shape[1]
-    entity2_bbox = [[int(entity2_center[0]-(w2/2)),int(entity2_center[1]-(h2/2))],[int(entity2_center[0]+(w2/2)),int(entity2_center[1]+(h2/2))]]
+    entity2_bbox = [[int(entity2_center[0]-(w2/2))-self.text_margin,int(entity2_center[1]-(h2/2))-self.text_margin],[int(entity2_center[0]+(w2/2))+self.text_margin,int(entity2_center[1]+(h2/2))+self.text_margin]]
 
     # img = cv2.rectangle(img, tuple([entity2_center[0] - int(w2/2),entity2_center[1] - int(h2/2)]),tuple([entity2_center[0] + int(w2/2),entity2_center[1] + int(h2/2)]),(0,255,0),1)
 
