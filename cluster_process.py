@@ -387,21 +387,19 @@ def draw_textbox(self,img,current_entitiy,location):
             
     """
 
-    img = current_entitiy.draw_shape(img,location,w,h,self.text_margin,self.textbox_background,self.textbox_border_thickness)
+    img = current_entitiy.draw_shape(img,location)
 
     # location is center
     # x1,y1 is top left corner
-    x1 = location[0] - int(round(w/2)) - self.text_margin
-    y1 = location[1] - int(round(h/2)) - self.text_margin
+    x1 = location[0] - int(round(w/2)) - current_entitiy.text_margin
+    y1 = location[1] - int(round(h/2)) - current_entitiy.text_margin
 
-
-    b,g,r,a = 0,255,0,0
     img_pil = Image.fromarray(img)
     draw = ImageDraw.Draw(img_pil)
-    draw.text((x1 + self.text_margin, y1 + h + self.text_margin), label, font=current_entitiy.font, fill=self.text_color, anchor='lb')
+    draw.text((x1 + current_entitiy.text_margin, y1 + h + current_entitiy.text_margin), label, font=current_entitiy.font, fill=current_entitiy.text_color, anchor='lb')
     img = np.array(img_pil)
 
-    bbox = [[x1,y1],[x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)]]
+    bbox = [[x1,y1],[x1 + w + (current_entitiy.text_margin*2), y1 + h + (current_entitiy.text_margin*2)]]
 
     # cv2.imshow('image3',img)
     # cv2.waitKey(0)
@@ -657,18 +655,13 @@ def get_square(self,a,b):
 
     return rows, cols
 
-def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
+def draw_cluster(entity1,current_entitiy,placed_entities):
 
     entity1_center = entity1.center
-    h1 = entity1.height
-    w1 = entity1.width
-    c_h1 = current_entitiy.height
-    c_w1 = current_entitiy.width
 
     # get shape 1 and 2
-    shape1_x,shape1_y = entity1.get_points(w1,h1,self.text_margin)
-    shape2_x,shape2_y = current_entitiy.get_points(c_w1,c_h1,self.text_margin)
-
+    shape1_x,shape1_y = entity1.get_points()
+    shape2_x,shape2_y = current_entitiy.get_points()
 
     tmp_idx = random.randint(0,len(shape1_x)-1)
     factor = 1.0
@@ -683,10 +676,9 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
 
             # check if current reference point is in any of placed elipses
             for entity in placed_entities:
-                ref_center = entity.center
 
                 # check_point( h, k, x, y, a, b, text_margin)
-                p = entity.check_point(ref_center[0], ref_center[1], updated_x, updated_y, entity.width, entity.height, self.text_margin)
+                p = entity.check_point(updated_x, updated_y)
 
                 # img = cv2.circle(img, tuple([int(updated_x+500),int(updated_y+500)]),2,(0,255,0),1)
 
@@ -742,8 +734,8 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
         current_entitiy = placed_entities1[idx]
 
-        self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-        self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
+        current_entitiy.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+        current_entitiy.text_color = (255 - current_entitiy.textbox_background[0], 255 - current_entitiy.textbox_background[1], 255 - current_entitiy.textbox_background[2])
 
         current_center = [current_entitiy.center[0] + entity1_center[0] - int(w1/2),current_entitiy.center[1] + entity1_center[1] - int(h1/2)]
         img, tmp_bbox = draw_textbox(self,img,current_entitiy,current_center)
@@ -758,7 +750,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
     w1 = text1_shape[0]
     h1 = text1_shape[1]
-    entity1_bbox = [[int(entity1_center[0]-(w1/2))-self.text_margin,int(entity1_center[1]-(h1/2))-self.text_margin],[int(entity1_center[0]+(w1/2)+self.text_margin),int(entity1_center[1]+(h1/2))+self.text_margin]]
+    entity1_bbox = [[int(entity1_center[0]-(w1/2)),int(entity1_center[1]-(h1/2))],[int(entity1_center[0]+(w1/2)),int(entity1_center[1]+(h1/2))]]
 
     # img = cv2.rectangle(img, tuple([entity1_center[0] - int(w1/2),entity1_center[1] - int(h1/2)]),tuple([entity1_center[0] + int(w1/2),entity1_center[1] + int(h1/2)]),(0,255,0),1)
 
@@ -770,8 +762,8 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
         current_entitiy = placed_entities2[idx]
 
-        self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-        self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
+        current_entitiy.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+        current_entitiy.text_color = (255 - current_entitiy.textbox_background[0], 255 - current_entitiy.textbox_background[1], 255 - current_entitiy.textbox_background[2])
 
         current_center = [current_entitiy.center[0] + entity2_center[0] - int(w2/2),current_entitiy.center[1] + entity2_center[1] - int(h2/2)]
         img, tmp_bbox = draw_textbox(self,img,current_entitiy,current_center)
@@ -784,7 +776,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
  
     w2 = text2_shape[0]
     h2 = text2_shape[1]
-    entity2_bbox = [[int(entity2_center[0]-(w2/2))-self.text_margin,int(entity2_center[1]-(h2/2))-self.text_margin],[int(entity2_center[0]+(w2/2))+self.text_margin,int(entity2_center[1]+(h2/2))+self.text_margin]]
+    entity2_bbox = [[int(entity2_center[0]-(w2/2)),int(entity2_center[1]-(h2/2))],[int(entity2_center[0]+(w2/2)),int(entity2_center[1]+(h2/2))]]
 
     # img = cv2.rectangle(img, tuple([entity2_center[0] - int(w2/2),entity2_center[1] - int(h2/2)]),tuple([entity2_center[0] + int(w2/2),entity2_center[1] + int(h2/2)]),(0,255,0),1)
 
@@ -912,7 +904,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
         return False
 
                     
-def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_shape,template_im):
+def get_entity_placement(slice_shape,x_target,y_target,text1_shape,text2_shape,template_im):
 
     """
 
@@ -947,14 +939,14 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
 
         # LONG
         entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
-        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
+        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
 
         # template_im = cv2.circle(template_im, (entity1_center_x,entity1_center_y), math.floor(w1/2), self.arrow_color, -1)  
 
         # template_im = cv2.circle(template_im, (x_target,y_target), 20, self.arrow_color, -1)  
 
         entity2_center_y = entity1_center_y
-        entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
+        entity2_center_x = x_target + math.floor(w2/2)
 
 
 
@@ -964,10 +956,10 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
     elif dim_ratio < .6:
         # TALL
         entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
-        entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
+        entity1_center_y = y_target + math.floor(h1/2)
 
         entity2_center_x = entity1_center_x
-        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
+        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
 
         entity_configuration = TALL
 
@@ -975,20 +967,20 @@ def get_entity_placement(self,slice_shape,x_target,y_target,text1_shape,text2_sh
     else:
         # DOWN_SLASH
         if np.random.randint(2):
-            entity1_center_x = x_target + math.floor(w1/2) + self.text_margin
-            entity1_center_y = y_target + math.floor(h1/2)+ self.text_margin
+            entity1_center_x = x_target + math.floor(w1/2)
+            entity1_center_y = y_target + math.floor(h1/2)
 
-            entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2) - self.text_margin
-            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
+            entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2)
+            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
 
             entity_configuration = DOWN_SLASH
         # UP_SLASH
         else:
-            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2) - self.text_margin
-            entity1_center_y = y_target + math.floor(h1/2) + self.text_margin
+            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
+            entity1_center_y = y_target + math.floor(h1/2)
 
-            entity2_center_x = x_target + math.floor(w2/2) + self.text_margin
-            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2) - self.text_margin
+            entity2_center_x = x_target + math.floor(w2/2)
+            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
 
             entity_configuration = UP_SLASH
 
@@ -1069,17 +1061,21 @@ def get_entities(self,num_entities,img):
         cluster_str_len = np.random.randint(3,7)
         cluster_label = randomword(cluster_str_len).upper()
 
-        # load font and get text size
-        fontpath = os.path.join(self.font_folder, self.font_style)    
-        font = ImageFont.truetype(fontpath, self.font_size)
-        (c_w1, c_h1) = font.getsize(cluster_label)
-
         # instantiate shape
         entity_type = random.choice([RECT, ELLIPSE])
         if entity_type == RECT:
-            c_entity = Synthetic_Rectangle([0,0],c_w1,c_h1,cluster_label,font)
+            c_entity = Synthetic_Rectangle([0,0],cluster_label)
         elif entity_type == ELLIPSE:
-            c_entity = Synthetic_Ellipse([0,0],c_w1,c_h1,cluster_label,font)
+            c_entity = Synthetic_Ellipse([0,0],cluster_label)
+
+        # load font and get text size
+        fontpath = os.path.join(self.font_folder, self.font_style)    
+        font = ImageFont.truetype(fontpath, c_entity.font_size)
+        (c_w1, c_h1) = font.getsize(cluster_label)
+
+        c_entity.width = c_w1
+        c_entity.height = c_h1
+        c_entity.font = font
 
         c_entities.append(copy.deepcopy(c_entity))
 
@@ -1090,7 +1086,7 @@ def get_entities(self,num_entities,img):
 
     for current_entitiy in c_entities[1:]:
 
-        new_center = draw_cluster(self,entity1,current_entitiy,placed_entities,img)
+        new_center = draw_cluster(entity1,current_entitiy,placed_entities)
         current_entitiy.center = new_center
         placed_entities.append(current_entitiy)
 
@@ -1106,7 +1102,7 @@ def get_entities(self,num_entities,img):
 
         # TODO:: may be different for other shapes
         # **********************************************************************************************************
-        tmp_min_x, tmp_max_x, tmp_min_y, tmp_max_y = entity.get_min_max(self.text_margin)
+        tmp_min_x, tmp_max_x, tmp_min_y, tmp_max_y = entity.get_min_max()
 
 
         if tmp_min_x < min_x:
@@ -1137,7 +1133,6 @@ def get_entities(self,num_entities,img):
 
 def set_relationship_config(self):
     
-    self.padding = 30
     self.thickness = random.randint(1, 3)
     self.tip_len = random.randint(5, 15)
     self.base_len = random.randint(10, 20)
@@ -1157,14 +1152,6 @@ def set_text_config(self):
     self.font_folder = "font_folder"
     font_style_list = os.listdir(self.font_folder)
     self.font_style = random.choice(font_style_list)
-
-    self.font_size = random.randint(8, 20)
-    # self.font_size = random.randint(5, 8) * 0.1
-    self.text_margin = random.randint(5, 15)
-    self.text_thickness = random.randint(1, 2)
-    self.textbox_background = (0,0,230)
-    self.textbox_border_thickness = random.randint(0, 2)
-
 
     return self
 
@@ -1266,7 +1253,7 @@ class copy_thread(threading.Thread):
                     self.spline_type = LINE
 
                     self = set_relationship_config(self)
-                    entity1_center,entity2_center,entity_configuration,template_im = get_entity_placement(self,slice_shape,x_target,y_target,(w1,h1),(w2,h2),template_im)
+                    entity1_center,entity2_center,entity_configuration,template_im = get_entity_placement(slice_shape,x_target,y_target,(w1,h1),(w2,h2),template_im)
                     
                     try:
                         template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
@@ -1428,23 +1415,25 @@ def populate_figures():
         break
 
 class Synthetic_Ellipse:
-    def __init__(self, center, width, height, label, font):
+    def __init__(self, center, label):
         self.center = center
-        self.width = width
-        self.height = height
         self.label = label
-        self.font = font
+        self.font_size = random.randint(8, 20)
+        self.text_margin = random.randint(5, 15)
+        self.text_thickness = random.randint(1, 2)
+        self.textbox_background = (0,0,230)
+        self.textbox_border_thickness = random.randint(0, 2)
     
-    def draw_shape(self,img,center,width,height,text_margin,textbox_background,textbox_border_thickness):
+    def draw_shape(self,img,center):
 
-        img = cv2.ellipse(img, tuple(center), (int(round(width*.5))+text_margin,int(round(height*.5))+text_margin), 0, 0, 360, textbox_background, -1)
+        img = cv2.ellipse(img, tuple(center), (int(round(self.width*.5))+self.text_margin,int(round(self.height*.5))+self.text_margin), 0, 0, 360, self.textbox_background, -1)
         if np.random.randint(2):
             border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-            img = cv2.ellipse(img, tuple(center), (int(round(width*.5))+text_margin,int(round(height*.5))+text_margin), 0, 0, 360, border_color, textbox_border_thickness)
+            img = cv2.ellipse(img, tuple(center), (int(round(self.width*.5))+self.text_margin,int(round(self.height*.5))+self.text_margin), 0, 0, 360, border_color, self.textbox_border_thickness)
 
         return img
 
-    def get_points(self,a,b,text_margin):
+    def get_points(self):
         '''
             inputs
                 a: text width
@@ -1453,8 +1442,8 @@ class Synthetic_Ellipse:
         # a = w
         # b = h
         # a and b are axes lengths
-        a = int(round(a*.5))+text_margin
-        b = int(round(b*.5))+text_margin
+        a = int(round(self.width*.5))+self.text_margin
+        b = int(round(self.height*.5))+self.text_margin
 
         npoints = 1000
         delta_theta=2.0*math.pi/npoints
@@ -1503,7 +1492,12 @@ class Synthetic_Ellipse:
 
         return ellip_x_prime, ellip_y_prime
 
-    def check_point(self,h, k, x, y, a, b, text_margin):
+    def check_point(self, x, y):
+
+        h = self.center[0]
+        k = self.center[1]
+        a = self.width
+        b = self.height
 
         '''
             inputs
@@ -1512,8 +1506,8 @@ class Synthetic_Ellipse:
         '''
 
         # get ellipse axes lengths
-        a = int(round(a*.5))+text_margin
-        b = int(round(b*.5))+text_margin
+        a = int(round(a*.5))+self.text_margin
+        b = int(round(b*.5))+self.text_margin
 
         # a and b are axes widths of ellipse
         # checking the equation of
@@ -1523,41 +1517,43 @@ class Synthetic_Ellipse:
     
         return p
 
-    def get_min_max(self,text_margin):
+    def get_min_max(self):
 
-        tmp_min_x = self.center[0] - (self.width/2) - text_margin
-        tmp_max_x = self.center[0] + (self.width/2) + text_margin
+        tmp_min_x = self.center[0] - (self.width/2) - self.text_margin
+        tmp_max_x = self.center[0] + (self.width/2) + self.text_margin
 
-        tmp_min_y = self.center[1] - (self.height/2) - text_margin
-        tmp_max_y = self.center[1] + (self.height/2) + text_margin
+        tmp_min_y = self.center[1] - (self.height/2) - self.text_margin
+        tmp_max_y = self.center[1] + (self.height/2) + self.text_margin
 
         return tmp_min_x, tmp_max_x, tmp_min_y, tmp_max_y
 
 class Synthetic_Rectangle:
-    def __init__(self, center, width, height, label, font):
+    def __init__(self, center, label):
         self.center = center
-        self.width = width
-        self.height = height
         self.label = label
-        self.font = font
+        self.font_size = random.randint(8, 20)
+        self.text_margin = random.randint(5, 15)
+        self.text_thickness = random.randint(1, 2)
+        self.textbox_background = (0,0,230)
+        self.textbox_border_thickness = random.randint(0, 2)
 
-    def draw_shape(self,img,center,width,height,text_margin,textbox_background,textbox_border_thickness):
+    def draw_shape(self,img,center):
 
         # location is center
         # x1,y1 is top left corner
-        x1 = center[0] - int(round(width/2)) - text_margin
-        y1 = center[1] - int(round(height/2)) - text_margin
+        x1 = center[0] - int(round(self.width/2)) - self.text_margin
+        y1 = center[1] - int(round(self.height/2)) - self.text_margin
 
-        img = cv2.rectangle(img, (x1, y1), (x1 + width + (text_margin*2), y1 + height + (text_margin*2)), textbox_background, -1)
+        img = cv2.rectangle(img, (x1, y1), (x1 + self.width + (self.text_margin*2), y1 + self.height + (self.text_margin*2)), self.textbox_background, -1)
         if np.random.randint(2):
             border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-            img = cv2.rectangle(img, (x1, y1), (x1 + width + (text_margin*2), y1 + height + (text_margin*2)), border_color, textbox_border_thickness)
+            img = cv2.rectangle(img, (x1, y1), (x1 + self.width + (self.text_margin*2), y1 + self.height + (self.text_margin*2)), border_color, self.textbox_border_thickness)
 
         return img
 
-    def get_points(self,a,b,text_margin):
+    def get_points(self):
 
-        rows,cols = draw.rectangle_perimeter(tuple([0,0]),tuple([a+(text_margin*2),b+(text_margin*2)]))
+        rows,cols = draw.rectangle_perimeter(tuple([0,0]),tuple([self.width+(self.text_margin*2),self.height+(self.text_margin*2)]))
         rows = rows.flatten()
         cols = cols.flatten()
 
@@ -1570,23 +1566,28 @@ class Synthetic_Rectangle:
 
         return rows, cols
 
-    def check_point(self,h, k, x, y, a, b, text_margin):
+    def check_point(self, x, y):
 
-        a = a + text_margin*2
-        b = b + text_margin*2
+        h = self.center[0]
+        k = self.center[1]
+        a = self.width
+        b = self.height
+
+        a = a + self.text_margin*2
+        b = b + self.text_margin*2
 
         if x < h+(a/2) and x > h-(a/2) and y < k+(b/2) and y > k-(b/2):
             return 0
         else:
             return 1
 
-    def get_min_max(self,text_margin):
+    def get_min_max(self):
 
-        tmp_min_x = self.center[0] - (self.width/2) - text_margin
-        tmp_max_x = self.center[0] + (self.width/2) + text_margin
+        tmp_min_x = self.center[0] - (self.width/2) - self.text_margin
+        tmp_max_x = self.center[0] + (self.width/2) + self.text_margin
 
-        tmp_min_y = self.center[1] - (self.height/2) - text_margin
-        tmp_max_y = self.center[1] + (self.height/2) + text_margin
+        tmp_min_y = self.center[1] - (self.height/2) - self.text_margin
+        tmp_max_y = self.center[1] + (self.height/2) + self.text_margin
 
         return tmp_min_x, tmp_max_x, tmp_min_y, tmp_max_y
 
