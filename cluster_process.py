@@ -99,6 +99,8 @@ def get_slope(self,base_points,source_point,x_span,y_span):
             
     """
 
+
+
     # select distinct and nth closest
     max_idx = base_points.shape[0] - 1
     comparison_pt = None
@@ -117,10 +119,20 @@ def get_slope(self,base_points,source_point,x_span,y_span):
                 candidate_points.append(base_points[idx])
                 candidate_dists.append(tmp_dist)
 
-    if len(candidate_dists) >= lag:
-        candidate_dists = np.array(candidate_dists)
-        candidate_idxs = np.argsort(candidate_dists)
-        comparison_pt = candidate_points[candidate_idxs[lag]]
+
+    try:
+        if len(candidate_dists) >= lag:
+            candidate_dists = np.array(candidate_dists)
+            candidate_idxs = np.argsort(candidate_dists)
+            comparison_pt = candidate_points[candidate_idxs[lag]]
+    
+    except Exception as e:
+        print(e)
+        print(candidate_dists)
+        print(comparison_pt)
+        print("LAHHHHHH")
+    
+
 
     tmp_len = x_span.size
     if comparison_pt is None:
@@ -158,6 +170,8 @@ def draw_spline(self,img,x_span,y_span):
             spline_bbox (list): 2D-list with bbox corners for spline as [[x,y],[x,y]]
             
     """
+
+
     
     if self.spline_type == CORNER:
         spline_coef = x_span.size-2
@@ -169,6 +183,7 @@ def draw_spline(self,img,x_span,y_span):
     # clever way to break it up to avoid 1st param no duplicate error
     # make linespace to serve as first param and interpolating the target values which is the set of x & y values
     spl = make_interp_spline(param, np.c_[x_span,y_span], k=spline_coef) #(1)
+
 
     # TODO:: not sure what multiplier to use here
     X_, Y_ = spl(np.linspace(0, 1, x_span.size * 200)).T
@@ -197,6 +212,8 @@ def draw_spline(self,img,x_span,y_span):
 
     spline_bbox = [[min_x,min_y],[max_x,max_y]]
 
+
+
     # draw spline
     for x,y in base_points:
         img = cv2.circle(img, (x,y), self.thickness, self.arrow_color, -1)  
@@ -210,14 +227,14 @@ def draw_spline(self,img,x_span,y_span):
         source_point = [x_span[0],y_span[0]]
         corner_comparison_pt = [x_span[1],y_span[1]]
 
-    
+
     if self.spline_type == CORNER:
         orientation = check_orientation(source_point,corner_comparison_pt)
         f = np.nan
     else:
-
         f, comparison_pt = get_slope(self,base_points,source_point,x_span,y_span)
         orientation = check_orientation(source_point,comparison_pt)
+    
 
     return img, f, orientation, spline_bbox
 
@@ -754,7 +771,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
     # img = cv2.rectangle(img, tuple([entity1_center[0] - int(w1/2),entity1_center[1] - int(h1/2)]),tuple([entity1_center[0] + int(w1/2),entity1_center[1] + int(h1/2)]),(0,255,0),1)
 
-
+    
     w2 = text2_shape[0]
     h2 = text2_shape[1]
     # iteratively place cluster entities
@@ -785,12 +802,16 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     try:
         x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration)
     except Exception as e:
+        print("BAHAHAH")
         print(e)
         raise ValueError
-    
+
+
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
 
+
     img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
+
 
     min_x = int(indicator_bbox[0][0]) - 5
     min_y = int(indicator_bbox[0][1]) - 5
@@ -807,6 +828,11 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
 
     # if want relationship_bbox instead of indicator just return this in its place
     relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
+
+
+    
+    
+    
 
     return img,indicator_bbox,placed_entities1,placed_entities2
 
@@ -1141,6 +1167,7 @@ def set_relationship_config(self):
     # self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     self.arrow_color = (0, 0, 0)
     # self.text_color = (0,0,0)
+    # self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.arch_ratio = 0.1
     self.spline_type = LINE
@@ -1175,7 +1202,7 @@ class copy_thread(threading.Thread):
          # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
 
         # TODO:: do this random selection every placement
-        self.padding = 0
+        self.padding = 30
 
         # loop through templates
         # read template and get query coords
@@ -1223,11 +1250,11 @@ class copy_thread(threading.Thread):
             h2 = text2_shape[1]
 
 
-            # TODO:: set y_dim params based on x_dim value
-            # TODO:: set these values to be dependent of dims of text to place (i.e. make sure box is big enough for them)
-            # if we want to base y_dim off x_dim, then do we want one to be biased large if the other is small and vice versa?
-            x_dim = np.random.randint(100,150) + w1 + w2
-            y_dim = np.random.randint(100,150) + h1 + h2
+            # y_dim dependent on x_dim value
+            # TODO:: probably want to change this to make short tall and longs more likely
+            dist1 = np.random.randint(0,150)
+            x_dim = dist1 + w1 + w2
+            y_dim = np.random.randint(150-dist1,151) + h1 + h2
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
@@ -1258,6 +1285,7 @@ class copy_thread(threading.Thread):
                     try:
                         template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
                     except Exception as e: 
+                        print("CATS")
                         print(e)
                         continue
 
