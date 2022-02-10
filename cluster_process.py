@@ -395,10 +395,10 @@ def draw_textbox(self,img,current_entitiy,location):
     y1 = location[1] - int(round(h/2)) - self.text_margin
 
     if current_entitiy['type'] == ELLIPSE:
-        img = cv2.ellipse(img, tuple(location), (int(round(w*.80)),h), 0, 0, 360, self.textbox_background, -1)
+        img = cv2.ellipse(img, tuple(location), (int(round(w*.5))+self.text_margin,int(round(h*.5))+self.text_margin), 0, 0, 360, self.textbox_background, -1)
         if np.random.randint(2):
             border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-            img = cv2.ellipse(img, tuple(location), (math.floor(w*.80),h), 0, 0, 360, border_color, self.textbox_border_thickness)
+            img = cv2.ellipse(img, tuple(location), (int(round(w*.5))+self.text_margin,int(round(h*.5))+self.text_margin), 0, 0, 360, border_color, self.textbox_border_thickness)
     elif current_entitiy['type'] == RECT:
         img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
         if np.random.randint(2):
@@ -594,7 +594,12 @@ def check_rect_point(h, k, x, y, a, b):
     else:
         return 1
 
-def get_ellipse(a,b):
+def get_ellipse(self,a,b):
+    # a = w
+    # b = h
+    # margin?
+    a = int(round(a*.5))+self.text_margin
+    b = int(round(b*.5))+self.text_margin
 
     npoints = 1000
     delta_theta=2.0*math.pi/npoints
@@ -668,34 +673,16 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
     c_h1 = current_entitiy['height']
     c_w1 = current_entitiy['width']
 
-
     # get shape 1 and 2
-    if entity1['type'] == RECT or entity1['type'] == NO_SHAPE:
-        tmp_w1 = w1
-    elif entity1['type'] == ELLIPSE:
-        tmp_w1 = math.floor(w1*.80)
-
-    if current_entitiy['type'] == RECT or current_entitiy['type'] == NO_SHAPE:
-        tmp_w2 = c_w1
-    elif current_entitiy['type'] == ELLIPSE:
-        tmp_w2 = math.floor(c_w1*.80)
-
-
     if entity1['type'] == ELLIPSE:
-        shape1_x,shape1_y = get_ellipse(tmp_w1,h1)
+        shape1_x,shape1_y = get_ellipse(self,w1,h1)
     elif entity1['type'] == RECT or entity1['type'] == NO_SHAPE:
-        shape1_x,shape1_y = get_square(self,tmp_w1,h1)
+        shape1_x,shape1_y = get_square(self,w1,h1)
 
     if current_entitiy['type'] == ELLIPSE:
-        shape2_x,shape2_y = get_ellipse(tmp_w2,c_h1)
+        shape2_x,shape2_y = get_ellipse(self,c_w1,c_h1)
     elif current_entitiy['type'] == RECT or current_entitiy['type'] == NO_SHAPE:
-        shape2_x,shape2_y = get_square(self,tmp_w2,c_h1)
-
-    # low_corner = [int(entity1_center[0]-(tmp_w1/2)+500),int(entity1_center[1]-(h1/2)+500)]
-    # high_corner = [int(entity1_center[0]+(tmp_w1/2)+500),int(entity1_center[1]+(h1/2)+500)]
-    # img = cv2.rectangle(img, tuple(low_corner), tuple(high_corner), self.textbox_background, 1)
-    # img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin*2), y1 + h + (self.text_margin*2)), self.textbox_background, -1)
-
+        shape2_x,shape2_y = get_square(self,c_w1,c_h1)
 
     tmp_idx = random.randint(0,len(shape1_x)-1)
     factor = 1.0
@@ -713,8 +700,9 @@ def draw_cluster(self,entity1,current_entitiy,placed_entities,img):
                 ref_center = entity['center']
             
                 if entity['type'] == ELLIPSE:
-                    ref_width = math.floor(entity['width']*.80)
-                    p = check_ellipse_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height'])
+                    # ref_width = math.floor(entity['width']*.50)
+                    ref_width = int(round(entity['width']*.5))+self.text_margin
+                    p = check_ellipse_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,int(round(entity['height']*.5))+self.text_margin)
                 elif entity['type'] == RECT or entity['type'] == NO_SHAPE:
                     ref_width = entity['width'] + self.text_margin*2
                     p = check_rect_point(ref_center[0],ref_center[1],updated_x,updated_y,ref_width,entity['height']+(self.text_margin*2))
@@ -794,9 +782,6 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     # img = cv2.rectangle(img, tuple([entity1_center[0] - int(w1/2),entity1_center[1] - int(h1/2)]),tuple([entity1_center[0] + int(w1/2),entity1_center[1] + int(h1/2)]),(0,255,0),1)
 
 
-
-
-
     w2 = text2_shape[0]
     h2 = text2_shape[1]
     # iteratively place cluster entities
@@ -815,14 +800,12 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
         # img = cv2.rectangle(img, tuple([int(current_center[0]-current_entitiy['width']*.8),current_center[1]-current_entitiy['height']]),tuple([int(current_center[0]+current_entitiy['width']*.8),current_center[1]+current_entitiy['height']]),(255,0,0),1)
 
     # img = cv2.circle(img,tuple(entity2_center),2,(255,0,0),1)
-
+ 
     w2 = text2_shape[0]
     h2 = text2_shape[1]
     entity2_bbox = [[int(entity2_center[0]-(w2/2))-self.text_margin,int(entity2_center[1]-(h2/2))-self.text_margin],[int(entity2_center[0]+(w2/2))+self.text_margin,int(entity2_center[1]+(h2/2))+self.text_margin]]
 
     # img = cv2.rectangle(img, tuple([entity2_center[0] - int(w2/2),entity2_center[1] - int(h2/2)]),tuple([entity2_center[0] + int(w2/2),entity2_center[1] + int(h2/2)]),(0,255,0),1)
-
-
 
     # force anchors to be outside of cluster bboxes
 
@@ -848,10 +831,9 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     max_x = int(max([spline_bbox[1][0],indicator_bbox[1][0]]))
     max_y = int(max([spline_bbox[1][1],indicator_bbox[1][1]]))
 
+
+    # if want relationship_bbox instead of indicator just return this in its place
     relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
-
-    # img = cv2.rectangle(img, tuple([indicator_bbox[0][0],indicator_bbox[0][1]]),tuple([indicator_bbox[2][0],indicator_bbox[2][1]]),(255,0,0),1)
-
 
     return img,indicator_bbox,placed_entities1,placed_entities2
 
@@ -1121,7 +1103,7 @@ def set_text_config(self):
 
     self.font_size = random.randint(8, 20)
     # self.font_size = random.randint(5, 8) * 0.1
-    self.text_margin = random.randint(0, 15)
+    self.text_margin = random.randint(5, 15)
     self.text_thickness = random.randint(1, 2)
     self.textbox_background = (0,0,230)
     self.textbox_border_thickness = random.randint(0, 2)
@@ -1178,12 +1160,12 @@ def get_entities(self,num_entities,img):
         # look at /2 vs *.8 to fix
         # TODO:: another problem with elipses in vertical configurations bleeding over wall
         if entity['type'] == RECT or entity['type'] == NO_SHAPE:
-            tmp_min_x = entity['center'][0] - (entity['width']/2)
-            tmp_max_x = entity['center'][0] + (entity['width']/2)
+            tmp_min_x = entity['center'][0] - (entity['width']/2) - self.text_margin
+            tmp_max_x = entity['center'][0] + (entity['width']/2) + self.text_margin
 
         elif entity['type'] == ELLIPSE:
-            tmp_min_x = entity['center'][0] - ((entity['width']*.8))
-            tmp_max_x = entity['center'][0] + ((entity['width']*.8)) 
+            tmp_min_x = entity['center'][0] - ((entity['width']*.5)) - self.text_margin
+            tmp_max_x = entity['center'][0] + ((entity['width']*.5)) + self.text_margin
 
         tmp_min_y = entity['center'][1] - (entity['height']/2)
         tmp_max_y = entity['center'][1] + (entity['height']/2) 
