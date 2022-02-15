@@ -13,6 +13,8 @@ from scipy import stats
 import skimage.draw as draw
 import matplotlib.pyplot as plt
 from PIL import ImageFont, ImageDraw, Image
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 X_ORIENTATION = 0
 Y_ORIENTATION = 1
@@ -42,6 +44,7 @@ UP_SLASH = 3
 ELLIPSE = 0
 RECT = 1
 NO_SHAPE = 2
+POLYGON = 3
 
 
 def randomword(length):
@@ -672,7 +675,7 @@ def get_square(self,a,b):
 
     return rows, cols
 
-def draw_cluster(entity1,current_entitiy,placed_entities):
+def draw_cluster(entity1,current_entitiy,placed_entities,img):
 
     entity1_center = entity1.center
 
@@ -719,7 +722,7 @@ def draw_cluster(entity1,current_entitiy,placed_entities):
 
     new_center = [int(shape1_x[tmp_idx]*factor)+entity1_center[0],int(shape1_y[tmp_idx]*factor)+entity1_center[1]]
 
-    return new_center
+    return new_center, img
 
 def draw_relationship(self,img,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape):
 
@@ -730,8 +733,8 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
         Args:
             self: contains hyperparameter config
             img (np.Array): copied template image for stitching
-            entity1_center (list): contains target center of entity1 bbox as [entity1_center_x,entity1_center_y]
-            entity2_center (list): contains target center of entity2 bbox as [entity2_center_x,entity2_center_y]
+            entity1_center (list): contains target center of cluster1 bbox as [entity1_center_x,entity1_center_y]
+            entity2_center (list): contains target center of cluster2 bbox as [entity2_center_x,entity2_center_y]
             text1_shape (list): contains target dimensions of text to place as [w1,h1]
             text2_shape (list): contains target dimensions of text to place as [w2,h2]
             label1 (str): text to place as entity1 
@@ -1088,11 +1091,14 @@ def get_entities(self,num_entities,img):
         cluster_label = randomword(cluster_str_len).upper()
 
         # instantiate shape
-        entity_type = random.choice([RECT, ELLIPSE])
+        # entity_type = random.choice([RECT, ELLIPSE, POLYGON])
+        entity_type = POLYGON
         if entity_type == RECT:
             c_entity = Synthetic_Rectangle([0,0],cluster_label)
         elif entity_type == ELLIPSE:
             c_entity = Synthetic_Ellipse([0,0],cluster_label)
+        elif entity_type == POLYGON:
+            c_entity = Synthetic_Shape([0,0],cluster_label)
 
         # load font and get text size
         fontpath = os.path.join(self.font_folder, self.font_style)    
@@ -1112,7 +1118,7 @@ def get_entities(self,num_entities,img):
 
     for current_entitiy in c_entities[1:]:
 
-        new_center = draw_cluster(entity1,current_entitiy,placed_entities)
+        new_center,img = draw_cluster(entity1,current_entitiy,placed_entities,img)
         current_entitiy.center = new_center
         placed_entities.append(current_entitiy)
 
@@ -1233,17 +1239,16 @@ class copy_thread(threading.Thread):
             # TODO:: include more dynamic variations of textbox (oval, no textbox)
             # TODO:: dynamically change indicator length and width
 
-
             self = set_text_config(self)
 
-            num_entities = np.random.randint(1,3)
+            num_entities = np.random.randint(2,3)
             # num_entities = 1
             # text shape is actually cluster shape dimensions
             placed_entities1, text1_shape,template_im = get_entities(self,num_entities,template_im)
             w1 = text1_shape[0]
             h1 = text1_shape[1]
 
-            num_entities = np.random.randint(1,3)
+            num_entities = np.random.randint(2,3)
             # num_entities = 1
             placed_entities2, text2_shape,template_im = get_entities(self,num_entities,template_im)
             w2 = text2_shape[0]
@@ -1581,7 +1586,7 @@ class Synthetic_Rectangle:
 
     def get_points(self):
 
-        rows,cols = draw.rectangle_perimeter(tuple([0,0]),tuple([self.width+(self.text_margin*2),self.height+(self.text_margin*2)]))
+        rows,cols = draw.rectangle_perimeter(tuple([0,0]),tuple([self.height+(self.text_margin*2),self.width+(self.text_margin*2)]))
         rows = rows.flatten()
         cols = cols.flatten()
 
@@ -1592,7 +1597,7 @@ class Synthetic_Rectangle:
         rows = rows - center[1]
         cols = cols - center[0]
 
-        return rows, cols
+        return cols, rows
 
     def check_point(self, x, y):
 
@@ -1604,6 +1609,7 @@ class Synthetic_Rectangle:
         a = a + self.text_margin*2
         b = b + self.text_margin*2
 
+        # zero means its inside
         if x < h+(a/2) and x > h-(a/2) and y < k+(b/2) and y > k-(b/2):
             return 0
         else:
@@ -1619,6 +1625,130 @@ class Synthetic_Rectangle:
 
         return tmp_min_x, tmp_max_x, tmp_min_y, tmp_max_y
 
+
+class Synthetic_Shape:
+    def __init__(self, center, label):
+        self.center = center
+        self.label = label
+        self.font_size = random.randint(8, 20)
+        self.text_margin = random.randint(5, 15)
+        self.text_thickness = random.randint(1, 2)
+        self.textbox_background = (0,0,230)
+        self.textbox_border_thickness = random.randint(0, 2)
+
+        shape_image = random.choice(os.listdir("shape_images"))
+        image = cv2.imread(os.path.join("shape_images",shape_image))
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)[1]
+        cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        self.cnt = cnts[0][1]
+        self.source_image_dims = image.shape
+
+    def draw_shape(self,img,center):
+
+        # get zero centered points
+        cols, rows = self.get_points()
+
+        # send to new center
+        rows = rows + center[1]
+        cols = cols + center[0]
+
+        pts = np.stack((cols,rows),axis=-1).astype(np.int32)
+
+        img = cv2.fillPoly(img, [pts], self.textbox_background)
+        if np.random.randint(2):
+            border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+            img = cv2.polylines(img, [pts], True, border_color, self.textbox_border_thickness)
+
+        return img
+
+    def get_points(self):
+
+        # get points of shape
+        cnt = self.cnt.reshape((-1,2))
+        cols = cnt[:,0]
+        rows = cnt[:,1]
+        
+        # get dims of shape
+        maxes = cnt.max(axis=0)
+        mins = cnt.min(axis=0)
+        min_x, max_x, min_y, max_y = mins[0], maxes[0], mins[1], maxes[1]
+        len_x = max_x - min_x
+        len_y = max_y - min_y
+
+        # zero center shape
+        center = [np.rint((len_x/2)+min_x),np.rint((len_y/2)+min_y)]
+        rows = rows - center[1]
+        cols = cols - center[0]
+
+        rows = np.rint(rows).astype(np.int32)
+        cols = np.rint(cols).astype(np.int32)
+
+        # resize shape
+        rows, cols = self.transform_points(rows, cols, len_x, len_y)
+
+        return cols, rows
+
+    def transform_points(self,rows,cols,current_width,current_height):
+
+        # transform base shape to be the desired dimensions
+
+        w_factor = (self.width + (self.text_margin*2)) / current_width
+        h_factor = (self.height + (self.text_margin*2)) / current_height
+        
+        transformed_cols = []
+        transformed_rows = []
+        for idx in range(cols.shape[0]):
+            x_coord = cols[idx] * w_factor
+            y_coord = rows[idx] * h_factor
+
+            transformed_cols.append(x_coord)
+            transformed_rows.append(y_coord)
+
+        transformed_cols = np.rint(np.array(transformed_cols)).astype(np.int32)
+        transformed_rows = np.rint(np.array(transformed_rows)).astype(np.int32)
+        
+        return transformed_rows, transformed_cols
+
+
+    def check_point(self, x, y):
+
+        h = self.center[0]
+        k = self.center[1]
+
+        # get zero centered points
+        cols, rows = self.get_points()
+
+        # send to new center
+        rows = rows + k
+        cols = cols + h
+
+        polygon = Polygon(zip(cols,rows))
+        point = Point(x, y)
+        inside_flag = polygon.contains(point)
+
+        # return zero means its inside
+        if inside_flag:
+            return 0
+        else:
+            return 1
+
+
+    def get_min_max(self):
+
+        # get zero centered points
+        cols, rows = self.get_points()
+
+        # send to new center
+        rows = rows + self.center[1]
+        cols = cols + self.center[0]
+
+        pts = np.stack((cols,rows),axis=-1).astype(np.int32)
+        
+        maxes = pts.max(axis=0)
+        mins = pts.min(axis=0)
+
+        return mins[0], maxes[0], mins[1], maxes[1]
 
 if __name__ == "__main__":
 
