@@ -1,14 +1,5 @@
-import cv2
-from matplotlib.pyplot import axis
-import numpy as np
-import random
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
-
-
-# todo just use keypoints from contours
 class Synthetic_Shape:
-    def __init__(self, center, label, im_path):
+    def __init__(self, center, label):
         self.center = center
         self.label = label
         self.font_size = random.randint(8, 20)
@@ -17,61 +8,65 @@ class Synthetic_Shape:
         self.textbox_background = (0,0,230)
         self.textbox_border_thickness = random.randint(0, 2)
 
-        image = cv2.imread(im_path)
+        shape_image = random.choice(os.listdir("shape_images"))
+        image = cv2.imread(os.path.join("shape_images",shape_image))
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)[1]
         cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         self.cnt = cnts[0][1]
         self.source_image_dims = image.shape
 
-    def draw_shape(self,img):
-
-        # TODO:: adjust for center and centering points 0,0
-        # look at other draw  shapes and get points for reference
-        # i think this should work for zero_centering the points
-        # x, y = polygon1.exterior.xy
+    def draw_shape(self,img,center):
 
         # get zero centered points
-        rows, cols = self.get_points()
+        cols, rows = self.get_points()
 
         # send to new center
-        rows = rows + self.center[1]
-        cols = cols + self.center[0]
+        rows = rows + center[1]
+        cols = cols + center[0]
 
         pts = np.stack((cols,rows),axis=-1).astype(np.int32)
 
-        # img = cv2.circle(img, tuple([int(x),int(y)]), 2, (0,0,0), -1)
-        img = cv2.polylines(img, [pts], True, (0,0,0), 2)
+        img = cv2.fillPoly(img, [pts], self.textbox_background)
+        if np.random.randint(2):
+            border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+            img = cv2.polylines(img, [pts], True, border_color, self.textbox_border_thickness)
+
         return img
 
     def get_points(self):
 
-
-        # TODO:: adjust for center
+        # get points of shape
         cnt = self.cnt.reshape((-1,2))
         cols = cnt[:,0]
         rows = cnt[:,1]
-
-        min_x, max_x, min_y, max_y = self.get_min_max()
+        
+        # get dims of shape
+        maxes = cnt.max(axis=0)
+        mins = cnt.min(axis=0)
+        min_x, max_x, min_y, max_y = mins[0], maxes[0], mins[1], maxes[1]
         len_x = max_x - min_x
         len_y = max_y - min_y
 
+        # zero center shape
         center = [np.rint((len_x/2)+min_x),np.rint((len_y/2)+min_y)]
-
         rows = rows - center[1]
         cols = cols - center[0]
 
         rows = np.rint(rows).astype(np.int32)
         cols = np.rint(cols).astype(np.int32)
 
+        # resize shape
         rows, cols = self.transform_points(rows, cols, len_x, len_y)
 
-        return rows, cols
+        return cols, rows
 
     def transform_points(self,rows,cols,current_width,current_height):
 
-        w_factor = self.width / current_width
-        h_factor = self.height / current_height
+        # transform base shape to be the desired dimensions
+
+        w_factor = (self.width + (self.text_margin*2)) / current_width
+        h_factor = (self.height + (self.text_margin*2)) / current_height
         
         transformed_cols = []
         transformed_rows = []
@@ -94,7 +89,7 @@ class Synthetic_Shape:
         k = self.center[1]
 
         # get zero centered points
-        rows, cols = self.get_points()
+        cols, rows = self.get_points()
 
         # send to new center
         rows = rows + k
@@ -113,27 +108,16 @@ class Synthetic_Shape:
 
     def get_min_max(self):
 
-        cnts = self.cnt.reshape((-1,2))
+        # get zero centered points
+        cols, rows = self.get_points()
+
+        # send to new center
+        rows = rows + self.center[1]
+        cols = cols + self.center[0]
+
+        pts = np.stack((cols,rows),axis=-1).astype(np.int32)
         
-        maxes = cnts.max(axis=0)
-        mins = cnts.min(axis=0)
+        maxes = pts.max(axis=0)
+        mins = pts.min(axis=0)
 
         return mins[0], maxes[0], mins[1], maxes[1]
-
-if __name__ == "__main__":
-
-    my_shape = Synthetic_Shape([0,0], "tree", "2.jpg")
-
-    my_shape.height = 100
-    my_shape.width = 100
-    rows, cols = my_shape.get_points()
-    
-    
-    img = np.ones((1000,1000,3), np.float32) * 255
-    my_shape.center = (500,500)
-
-    img = my_shape.draw_shape(img)
-
-    cv2.imshow('image3',img.astype(np.uint8))
-    cv2.waitKey(0)
-    
