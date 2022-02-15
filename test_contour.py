@@ -5,6 +5,8 @@ import random
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
+
+# todo just use keypoints from contours
 class Synthetic_Shape:
     def __init__(self, center, label, im_path):
         self.center = center
@@ -18,7 +20,7 @@ class Synthetic_Shape:
         image = cv2.imread(im_path)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)[1]
-        cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         self.cnt = cnts[0][1]
         self.source_image_dims = image.shape
 
