@@ -24,25 +24,28 @@ class Synthetic_Shape:
         self.cnt = cnts[0][1]
         self.source_image_dims = image.shape
 
-    def draw_shape(self,img,center):
+    def draw_shape(self,img):
 
         # TODO:: adjust for center and centering points 0,0
         # look at other draw  shapes and get points for reference
         # i think this should work for zero_centering the points
+        # x, y = polygon1.exterior.xy
 
-        min_x, max_x, min_y, max_y = self.get_min_max()
-        len_x = max_x - min_x
-        len_y = max_y - min_y
+        # get zero centered points
+        rows, cols = self.get_points()
 
-        cnts = self.cnt.reshape((-1,2))
-        for cnt in cnts:
+        # send to new center
+        rows = rows + self.center[1]
+        cols = cols + self.center[0]
 
-            zero_centered_point = [cnt[0]-(len_x/2),cnt[1]-(len_y/2)]
-            img = cv2.circle(img, (zero_centered_point), 2, (0,0,0), -1)
-        
+        pts = np.stack((cols,rows),axis=-1).astype(np.int32)
+
+        # img = cv2.circle(img, tuple([int(x),int(y)]), 2, (0,0,0), -1)
+        img = cv2.polylines(img, [pts], True, (0,0,0), 2)
         return img
 
     def get_points(self):
+
 
         # TODO:: adjust for center
         cnt = self.cnt.reshape((-1,2))
@@ -61,72 +64,51 @@ class Synthetic_Shape:
         rows = np.rint(rows).astype(np.int32)
         cols = np.rint(cols).astype(np.int32)
 
+        rows, cols = self.transform_points(rows, cols, len_x, len_y)
+
         return rows, cols
+
+    def transform_points(self,rows,cols,current_width,current_height):
+
+        w_factor = self.width / current_width
+        h_factor = self.height / current_height
+        
+        transformed_cols = []
+        transformed_rows = []
+        for idx in range(cols.shape[0]):
+            x_coord = cols[idx] * w_factor
+            y_coord = rows[idx] * h_factor
+
+            transformed_cols.append(x_coord)
+            transformed_rows.append(y_coord)
+
+        transformed_cols = np.rint(np.array(transformed_cols)).astype(np.int32)
+        transformed_rows = np.rint(np.array(transformed_rows)).astype(np.int32)
+        
+        return transformed_rows, transformed_cols
+
 
     def check_point(self, x, y):
 
-        # TODO:: adjust cnt points for locations in point
-
         h = self.center[0]
         k = self.center[1]
-        # a = self.width
-        # b = self.height
 
+        # get zero centered points
+        rows, cols = self.get_points()
 
+        # send to new center
+        rows = rows + k
+        cols = cols + h
 
-
-        # TODO:: adjust for center
-        cnt = self.cnt.reshape((-1,2))
-        cols = cnt[:,0]
-        rows = cnt[:,1]
-
-        min_x, max_x, min_y, max_y = self.get_min_max()
-        len_x = max_x - min_x
-        len_y = max_y - min_y
-
-        center = [np.rint((len_x/2)+min_x),np.rint((len_y/2)+min_y)]
-
-        rows = rows - center[1] + k
-        cols = cols - center[0] + h
-
-        rows = np.rint(rows).astype(np.int32)
-        cols = np.rint(cols).astype(np.int32)
-
-        points = np.stack([cols,rows])
-        # points = points.reshape((-1,1,2))
         polygon = Polygon(zip(cols,rows))
-
-        img = np.zeros((500,500,3), np.float32)
-        # for x_coord, y_coord in zip(cols,rows):
-        #     img = cv2.circle(img, (x_coord,y_coord), 1, (0,0,0), -1)
-
-        for y_idx in range(img.shape[0]):
-            for x_idx in range(img.shape[1]):
-                # dist = cv2.pointPolygonTest(points,(x_idx,y_idx),True)
-                point = Point(x_idx, y_idx)
-                inside_flag = polygon.contains(point)
-                if inside_flag:
-                    img[y_idx,x_idx,:] = 255
-                else:
-                    img[y_idx,x_idx,:] = 0
-
-        # min = img.min()
-        # max = img.max()
-        # img -= min
-        # img /= (max - min) 
-        # img *= 255
-
-        # print(dist)
-        # img = cv2.circle(img, (x,y), 2, (0,255,0), -1)
-        cv2.imshow('image3',img.astype(np.uint8))
-        cv2.waitKey(0)
-
+        point = Point(x, y)
+        inside_flag = polygon.contains(point)
 
         # return zero means its inside
-        if dist < 0:
-            return 1
-        else:
+        if inside_flag:
             return 0
+        else:
+            return 1
 
 
     def get_min_max(self):
@@ -141,24 +123,17 @@ class Synthetic_Shape:
 if __name__ == "__main__":
 
     my_shape = Synthetic_Shape([0,0], "tree", "2.jpg")
+
+    my_shape.height = 100
+    my_shape.width = 100
     rows, cols = my_shape.get_points()
     
-    my_shape.center = (200,200)
-    # for x_coord, y_coord in zip(cols,rows):
-    #     img = cv2.circle(img, (x_coord+my_shape.center[0],y_coord+my_shape.center[1]), 1, (0,0,0), -1)
     
-    
-    val = my_shape.check_point(120,200)
+    img = np.ones((1000,1000,3), np.float32) * 255
+    my_shape.center = (500,500)
 
-    # cnt = my_shape.cnt.reshape((-1,2))
-    # for point in cnt:
-    #     zero_centered_point = [point[0],point[1]]
-    #     img = cv2.circle(img, (zero_centered_point), 1, (0,0,0), -1)
+    img = my_shape.draw_shape(img)
 
-    # val = my_shape.check_point(25,150)
-    # print(val)
-    # img = cv2.circle(img, (25,150), 2, (0,255,0), -1)
-
-    # cv2.imshow('image3',img)
-    # cv2.waitKey(0)
+    cv2.imshow('image3',img.astype(np.uint8))
+    cv2.waitKey(0)
     
