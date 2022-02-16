@@ -122,21 +122,11 @@ def get_slope(self,base_points,source_point,x_span,y_span):
             if tmp_dist < dist:
                 candidate_points.append(base_points[idx])
                 candidate_dists.append(tmp_dist)
-
-
-    try:
-        if len(candidate_dists) >= lag:
-            candidate_dists = np.array(candidate_dists)
-            candidate_idxs = np.argsort(candidate_dists)
-            comparison_pt = candidate_points[candidate_idxs[lag]]
-    
-    except Exception as e:
-        print(e)
-        print(candidate_dists)
-        print(comparison_pt)
-        print("LAHHHHHH")
-    
-
+  
+    if len(candidate_dists) >= lag:
+        candidate_dists = np.array(candidate_dists)
+        candidate_idxs = np.argsort(candidate_dists)
+        comparison_pt = candidate_points[candidate_idxs[lag]]
 
     tmp_len = x_span.size
     if comparison_pt is None:
@@ -879,7 +869,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
             
     """
 
-    threshold = 10
+    threshold = 5
 
     template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
@@ -918,6 +908,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
     # plt.show()
 
     if bin_means[-1] < threshold and bin_means[-2] < threshold:
+        
         return True
     else:
         return False
@@ -1198,7 +1189,7 @@ class copy_thread(threading.Thread):
          # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
 
         # TODO:: do this random selection every placement
-        self.padding = 30
+        self.padding = 0
 
         # loop through templates
         # read template and get query coords
@@ -1270,8 +1261,7 @@ class copy_thread(threading.Thread):
                     # template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
                     # template_im = cv2.rectangle(template_im, (x_target-self.padding, y_target-self.padding), (x_target+x_dim+self.padding, y_target+y_dim+self.padding), (0,0,0), 1)
-                    # rows,cols = draw.rectangle_perimeter((x_target-self.padding, y_target-self.padding),(x_target+x_dim+self.padding, y_target+y_dim+self.padding))
-
+                   
                     self.spline_type = LINE
 
                     self = set_relationship_config(self)
@@ -1410,32 +1400,32 @@ def populate_figures():
             break
 
         thread0 = template_thread(template_idx,"thread-0",template_list,directory)
-        # thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
-        # thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
-        # thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
+        thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
+        thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
+        thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
 
         thread0.start()
-        # if template_idx + 1 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread1.start()
-        # if template_idx + 2 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread2.start()
-        # if template_idx + 3 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread3.start()
+        if template_idx + 1 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread1.start()
+        if template_idx + 2 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread2.start()
+        if template_idx + 3 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread3.start()
 
         thread0.join()
-        # thread1.join()
-        # thread2.join()
-        # thread3.join()
-        break
+        thread1.join()
+        thread2.join()
+        thread3.join()
+        # break
 
 
 
