@@ -410,7 +410,7 @@ def draw_textbox(self,img,current_entitiy,location):
     draw.text((x1 + current_entitiy.text_margin, y1 + h + current_entitiy.text_margin), label, font=current_entitiy.font, fill=current_entitiy.text_color, anchor='lb')
     img = np.array(img_pil)
 
-    bbox = [[x1,y1],[x1 + w + (current_entitiy.text_margin*2), y1 + h + (current_entitiy.text_margin*2)]]
+    bbox = [[x1+current_entitiy.text_margin,y1+current_entitiy.text_margin],[x1 + current_entitiy.text_margin + w, y1 + current_entitiy.text_margin + h]]
 
     # cv2.imshow('image3',img)
     # cv2.waitKey(0)
@@ -796,17 +796,17 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
 
 
-    min_x = int(indicator_bbox[0][0]) - 5
-    min_y = int(indicator_bbox[0][1]) - 5
-    max_x = int(indicator_bbox[1][0]) + 5
-    max_y = int(indicator_bbox[1][1]) + 5
+    min_x = int(indicator_bbox[0][0]) - 3
+    min_y = int(indicator_bbox[0][1]) - 3
+    max_x = int(indicator_bbox[1][0]) + 3
+    max_y = int(indicator_bbox[1][1]) + 3
     indicator_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
     # get final relationship bbox by taking max dims of spline and indicator
-    min_x = int(min([spline_bbox[0][0],indicator_bbox[0][0]]))
-    min_y = int(min([spline_bbox[0][1],indicator_bbox[0][1]]))
-    max_x = int(max([spline_bbox[1][0],indicator_bbox[1][0]]))
-    max_y = int(max([spline_bbox[1][1],indicator_bbox[1][1]]))
+    min_x = int(min([spline_bbox[0][0]-5,indicator_bbox[0][0]]))
+    min_y = int(min([spline_bbox[0][1]-5,indicator_bbox[0][1]]))
+    max_x = int(max([spline_bbox[1][0]+5,indicator_bbox[2][0]]))
+    max_y = int(max([spline_bbox[1][1]+5,indicator_bbox[2][1]]))
 
 
     # if want relationship_bbox instead of indicator just return this in its place
@@ -817,7 +817,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     
     
 
-    return img,indicator_bbox,placed_entities1,placed_entities2
+    return img,relationship_bbox,placed_entities1,placed_entities2
 
 def radial_profile(data, center):
 
@@ -1000,67 +1000,6 @@ def get_entity_placement(slice_shape,x_target,y_target,text1_shape,text2_shape,t
 
     return entity1_center, entity2_center, entity_configuration,template_im
 
-
-
-class template_thread(threading.Thread):
-    def __init__(self, threadID,name,template_list,directory):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.template_list = template_list
-        self.directory = directory
-
-    def run(self):
-
-        """
-
-        Start 4 threads for generating x# samples from same templates at once 
-
-        """
-
-        filename = self.template_list[self.threadID]
-        
-        # how many images per template
-        stop_child_flag = False
-        num_copies = 1024
-        for copy_idx in range(0,num_copies):
-
-            # children in here
-            child_thread_idx = copy_idx * 4
-            # other parent threads
-            child_thread_idx = self.threadID*num_copies + child_thread_idx
-
-            if stop_child_flag:
-                break
-
-            child_thread0 = copy_thread(child_thread_idx,"child0",self.directory,filename)
-            # child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
-            # child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
-            # child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
-
-            child_thread0.start()
-            # if (copy_idx*4) + 1 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread1.start()
-            # if (copy_idx*4) + 2 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread2.start()
-            # if (copy_idx*4) + 3 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread3.start()
-
-            child_thread0.join()
-            # child_thread1.join()
-            # child_thread2.join()
-            # child_thread3.join()
-            break
-
 def get_entities(self,num_entities,img):
 
     # get cluster entities to place
@@ -1140,21 +1079,27 @@ def get_entities(self,num_entities,img):
     
     w1 = int(abs(min_x) + abs(max_x))
     h1 = int(abs(min_y) + abs(max_y))
-    text_shape = [w1,h1]
+    cluster_shape = [w1,h1]
 
-    return placed_entities, text_shape, img
+    return placed_entities, cluster_shape, img
 
 def set_relationship_config(self):
     
+    # set tip_len based on base_len 
     self.thickness = random.randint(1, 3)
-    self.tip_len = random.randint(5, 15)
-    self.base_len = random.randint(10, 20)
+    self.base_len = random.randint(self.thickness+5, 15)
+    self.tip_len = random.randint(self.base_len, 16)
+
+    # self.tip_len = random.randint(5, 15)
+    # self.base_len = random.randint(5, 21-(20-self.tip_len))
+
+        
     
     self.arrow_placement = random.choice([START, END])
     # self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     self.arrow_color = (0, 0, 0)
     # self.text_color = (0,0,0)
-    # self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
+    # self.indicator = random.choice([INHIBIT, ACTIVATE])
     self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.arch_ratio = 0.1
     self.spline_type = LINE
@@ -1189,7 +1134,7 @@ class copy_thread(threading.Thread):
          # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
 
         # TODO:: do this random selection every placement
-        self.padding = 0
+        self.padding = 20
 
         # loop through templates
         # read template and get query coords
@@ -1222,18 +1167,18 @@ class copy_thread(threading.Thread):
 
             self = set_text_config(self)
 
-            num_entities = np.random.randint(1,5)
-            # num_entities = 1
+            # num_entities = np.random.randint(1,5)
+            num_entities = 1
             # text shape is actually cluster shape dimensions
-            placed_entities1, text1_shape,template_im = get_entities(self,num_entities,template_im)
-            w1 = text1_shape[0]
-            h1 = text1_shape[1]
+            placed_entities1, cluster1_shape,template_im = get_entities(self,num_entities,template_im)
+            w1 = cluster1_shape[0]
+            h1 = cluster1_shape[1]
 
-            num_entities = np.random.randint(1,5)
-            # num_entities = 1
-            placed_entities2, text2_shape,template_im = get_entities(self,num_entities,template_im)
-            w2 = text2_shape[0]
-            h2 = text2_shape[1]
+            # num_entities = np.random.randint(1,5)
+            num_entities = 1
+            placed_entities2, cluster2_shape,template_im = get_entities(self,num_entities,template_im)
+            w2 = cluster2_shape[0]
+            h2 = cluster2_shape[1]
 
 
             # y_dim dependent on x_dim value
@@ -1268,7 +1213,7 @@ class copy_thread(threading.Thread):
                     entity1_center,entity2_center,entity_configuration,template_im = get_entity_placement(slice_shape,x_target,y_target,(w1,h1),(w2,h2),template_im)
                     
                     try:
-                        template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape)
+                        template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,cluster1_shape,cluster2_shape)
                     except Exception as e: 
                         print("CATS")
                         print(e)
@@ -1376,6 +1321,67 @@ class copy_thread(threading.Thread):
         imageWidth = template_im.shape[1]
         template_label_file = label_file.LabelFile()
         template_label_file.save(os.path.join(im_dir,str(self.copyID) + ".json"),shapes,image_path,imageHeight,imageWidth)
+
+
+class template_thread(threading.Thread):
+    def __init__(self, threadID,name,template_list,directory):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.template_list = template_list
+        self.directory = directory
+
+    def run(self):
+
+        """
+
+        Start 4 threads for generating x# samples from same templates at once 
+
+        """
+
+        filename = self.template_list[self.threadID]
+        
+        # how many images per template
+        stop_child_flag = False
+        num_copies = 200
+        for copy_idx in range(0,num_copies):
+
+            # children in here
+            child_thread_idx = copy_idx * 4
+            # other parent threads
+            child_thread_idx = self.threadID*num_copies + child_thread_idx
+
+            if stop_child_flag:
+                break
+
+            child_thread0 = copy_thread(child_thread_idx,"child0",self.directory,filename)
+            child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
+            child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
+            child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
+
+            child_thread0.start()
+            if (copy_idx*4) + 1 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread1.start()
+            if (copy_idx*4) + 2 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread2.start()
+            if (copy_idx*4) + 3 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread3.start()
+
+            child_thread0.join()
+            child_thread1.join()
+            child_thread2.join()
+            child_thread3.join()
+            # break
+
 
 def populate_figures():
 
