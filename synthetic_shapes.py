@@ -197,8 +197,9 @@ class Synthetic_Shape:
         self.textbox_background = (0,0,230)
         self.textbox_border_thickness = random.randint(0, 2)
 
-        shape_image = random.choice(os.listdir("shape_images"))
-        image = cv2.imread(os.path.join("shape_images",shape_image))
+        shape_source_dir = "shape_images"
+        shape_image = random.choice(os.listdir(shape_source_dir))
+        image = cv2.imread(os.path.join(shape_source_dir,shape_image))
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)[1]
         cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
