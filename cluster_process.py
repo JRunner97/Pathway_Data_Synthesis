@@ -941,58 +941,58 @@ def get_entity_placement(slice_shape,x_target,y_target,text1_shape,text2_shape,t
     (w2, h2) = text2_shape
 
     # 4 configurations/positioning: hotdog, hamburger, square1, square2
-    dim_ratio = slice_shape[0] / slice_shape[1]
-    if dim_ratio > 1.67:
+    # dim_ratio = slice_shape[0] / slice_shape[1]
+    # if dim_ratio > 1.67:
 
-        # print('cluster width')
-        # print(w1)
+    #     # print('cluster width')
+    #     # print(w1)
 
-        # LONG
-        entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
-        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
+    #     # LONG
+    #     entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
+    #     entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
 
-        # template_im = cv2.circle(template_im, (entity1_center_x,entity1_center_y), math.floor(w1/2), self.arrow_color, -1)  
+    #     # template_im = cv2.circle(template_im, (entity1_center_x,entity1_center_y), math.floor(w1/2), self.arrow_color, -1)  
 
-        # template_im = cv2.circle(template_im, (x_target,y_target), 20, self.arrow_color, -1)  
+    #     # template_im = cv2.circle(template_im, (x_target,y_target), 20, self.arrow_color, -1)  
 
-        entity2_center_y = entity1_center_y
-        entity2_center_x = x_target + math.floor(w2/2)
-
-
-
-        entity_configuration = LONG
+    #     entity2_center_y = entity1_center_y
+    #     entity2_center_x = x_target + math.floor(w2/2)
 
 
-    elif dim_ratio < .6:
-        # TALL
-        entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
+
+    #     entity_configuration = LONG
+
+
+    # elif dim_ratio < .6:
+    #     # TALL
+    #     entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
+    #     entity1_center_y = y_target + math.floor(h1/2)
+
+    #     entity2_center_x = entity1_center_x
+    #     entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
+
+    #     entity_configuration = TALL
+
+
+    # else:
+    # DOWN_SLASH
+    if np.random.randint(2):
+        entity1_center_x = x_target + math.floor(w1/2)
         entity1_center_y = y_target + math.floor(h1/2)
 
-        entity2_center_x = entity1_center_x
+        entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2)
         entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
 
-        entity_configuration = TALL
-
-
+        entity_configuration = DOWN_SLASH
+    # UP_SLASH
     else:
-        # DOWN_SLASH
-        if np.random.randint(2):
-            entity1_center_x = x_target + math.floor(w1/2)
-            entity1_center_y = y_target + math.floor(h1/2)
+        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
+        entity1_center_y = y_target + math.floor(h1/2)
 
-            entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2)
-            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
+        entity2_center_x = x_target + math.floor(w2/2)
+        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
 
-            entity_configuration = DOWN_SLASH
-        # UP_SLASH
-        else:
-            entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
-            entity1_center_y = y_target + math.floor(h1/2)
-
-            entity2_center_x = x_target + math.floor(w2/2)
-            entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
-
-            entity_configuration = UP_SLASH
+        entity_configuration = UP_SLASH
 
 
     entity1_center = [entity1_center_x,entity1_center_y]
@@ -1086,6 +1086,8 @@ def get_entities(self,num_entities,img):
 def set_relationship_config(self):
     
     # set tip_len based on base_len 
+
+    
     self.thickness = random.randint(1, 3)
     self.base_len = random.randint(self.thickness+5, 15)
     self.tip_len = random.randint(self.base_len, 16)
@@ -1183,9 +1185,42 @@ class copy_thread(threading.Thread):
 
             # y_dim dependent on x_dim value
             # TODO:: probably want to change this to make short tall and longs more likely
-            dist1 = np.random.randint(0,150)
-            x_dim = dist1 + w1 + w2
-            y_dim = np.random.randint(150-dist1,151) + h1 + h2
+            # dist1 = np.random.randint(0,50)
+            
+
+            dim_rand = np.random.randint(6)
+            if dim_rand < 2:
+                x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2
+                y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 50
+            elif 2 <= dim_rand < 4:
+                y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2
+                x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
+            else:
+                if np.random.randint(2):
+                    x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([w1,w2])
+                    y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 50
+                else:
+                    y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([h1,h2])
+                    x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
+
+
+
+            # if np.random.randint(2):
+            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([w1,w2])
+            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 50
+            # else:
+            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([h1,h2])
+            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
+
+
+
+            # if np.random.randint(2):
+            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2
+            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 100
+            # else:
+            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 100
+            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2
+            # y_dim = np.random.randint(50-dist1,51) + h1 + h2
             slice_shape = [x_dim,y_dim]
 
             # check if queried coords are a valid location
