@@ -183,17 +183,17 @@ def draw_spline(self,img,x_span,y_span):
     param = np.linspace(0, 1, x_span.size)
     # clever way to break it up to avoid 1st param no duplicate error
     # make linespace to serve as first param and interpolating the target values which is the set of x & y values
-    spl = make_interp_spline(param, np.c_[x_span,y_span], k=spline_coef) #(1)
-
+    spl = make_interp_spline(param, np.c_[x_span,y_span], k=spline_coef)
 
     # TODO:: not sure what multiplier to use here
-    X_, Y_ = spl(np.linspace(0, 1, x_span.size * 200)).T
+    X_, Y_ = spl(np.linspace(0, 1, x_span.size * 400)).T
 
-    X_ = np.round(X_, 0).astype(int)
-    Y_ = np.round(Y_, 0).astype(int)
+    X_ = np.around(X_, 0).astype(int)
+    Y_ = np.around(Y_, 0).astype(int)
 
     base_points = np.stack((X_,Y_)).T
-    base_points = np.unique(base_points, axis=0)
+    _,base_indeces = np.unique(base_points, return_index=True, axis=0)
+    base_points = base_points[np.sort(base_indeces)]
 
     base_points_x = base_points[:,0]
     min_x = np.min(base_points_x)
