@@ -604,7 +604,7 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
 
         # TODO:: do this better, maybe set multimodal distribution to pull from
         rand_int = np.random.randint(3)
-        if rand_int == 0 and abs(entity1_center[0]-entity2_center[0]) > 50 and abs(entity1_center[1]-entity2_center[1]) > 50:
+        if rand_int == 0 and abs(entity1_center[0]-entity2_center[0]) > 70 and abs(entity1_center[1]-entity2_center[1]) > 70:
             self.spline_type = CORNER
             spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
         elif rand_int == 1:
@@ -1143,7 +1143,7 @@ def set_relationship_config(self):
 
     
     self.thickness = random.randint(1, 3)
-    self.base_len = random.randint(self.thickness+5, 15)
+    self.base_len = random.randint(self.thickness+8, 15)
     self.tip_len = random.randint(self.base_len, 22)
 
     # self.tip_len = random.randint(5, 15)
