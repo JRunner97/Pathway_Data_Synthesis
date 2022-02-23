@@ -272,11 +272,11 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
     # TODO:: fine-tune these thresholds
     # if slope is extreme, then just place simple inicator in cardinal direction
-    if math.isnan(tip_slope) or abs(tip_slope) > 15 or abs(tip_slope) < 0.25:
+    if math.isnan(tip_slope) or abs(tip_slope) > 15 or abs(tip_slope) < 0.15:
 
         
 
-        if self.indicator == INHIBIT:
+        if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
 
             if arrow_orientation == UP:
                 pt1 = (tri_source[0]-self.base_len, tri_source[1])
@@ -354,7 +354,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
         pt1 = (tri_source[0]-base_run, tri_source[1]+base_rise)
         pt3 = (tri_source[0]+base_run, tri_source[1]-base_rise)
 
-        if self.indicator == ACTIVATE:
+        if self.indicator == ACTIVATE or self.indicator == INDIRECT_ACTIVATE:
 
             if arrow_orientation == RIGHT:
 
@@ -390,7 +390,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
                 
                 pt2 = (tri_source[0]-int(round(tip_run*.25)), tri_source[1]+int(round(tip_rise*.25)))
 
-        if self.indicator == INHIBIT:
+        if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
             triangle_cnt = np.array( [pt1, pt3] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
         else:
@@ -402,7 +402,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
                 cv2.polylines(img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
 
     # get bbox dims for corresponding indicator
-    if self.indicator == INHIBIT:
+    if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
         min_x = min([pt1[0],pt3[0]]) - self.thickness + 2
         min_y = min([pt1[1],pt3[1]]) - self.thickness + 2
 
