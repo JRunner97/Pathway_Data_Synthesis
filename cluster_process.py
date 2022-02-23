@@ -164,7 +164,14 @@ def draw_spline(self,img,x_span,y_span):
             spline_bbox (list): 2D-list with bbox corners for spline as [[x,y],[x,y]]
             
     """
+    num_points = x_span.size
 
+    # if self.arrow_placement == END:
+    #     x_span = x_span[:num_points-2]
+    #     y_span = y_span[:num_points-2]
+    # else:
+    #     x_span = x_span[2:]
+    #     y_span = y_span[2:]
 
     
     if self.spline_type == CORNER:
@@ -205,7 +212,6 @@ def draw_spline(self,img,x_span,y_span):
         base_points = base_points[:arr_len-odd_out,:].reshape(-1,intervals,2)[::2].reshape(-1,2)
 
     spline_bbox = [[min_x,min_y],[max_x,max_y]]
-
 
 
     # draw spline
@@ -266,33 +272,57 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
     # TODO:: fine-tune these thresholds
     # if slope is extreme, then just place simple inicator in cardinal direction
-    if math.isnan(tip_slope) or abs(tip_slope) > 10 or abs(tip_slope) < 0.5:
+    if math.isnan(tip_slope) or abs(tip_slope) > 15 or abs(tip_slope) < 0.25:
 
         
 
-        if arrow_orientation == UP:
-            pt1 = (tri_source[0]-self.base_len, tri_source[1])
-            pt2 = (tri_source[0], tri_source[1]-self.tip_len)
-            pt3 = (tri_source[0]+self.base_len, tri_source[1])
-        elif arrow_orientation == DOWN:
-            pt1 = (tri_source[0]+self.base_len, tri_source[1])
-            pt2 = (tri_source[0], tri_source[1]+self.tip_len)
-            pt3 = (tri_source[0]-self.base_len, tri_source[1])
-        elif arrow_orientation == LEFT:
-            pt1 = (tri_source[0], tri_source[1]-self.base_len)
-            pt2 = (tri_source[0]-self.tip_len, tri_source[1])
-            pt3 = (tri_source[0], tri_source[1]+self.base_len)
-        else:
-            pt1 = (tri_source[0], tri_source[1]+self.base_len)
-            pt2 = (tri_source[0]+self.tip_len, tri_source[1])
-            pt3 = (tri_source[0], tri_source[1]-self.base_len)
-
         if self.indicator == INHIBIT:
+
+            if arrow_orientation == UP:
+                pt1 = (tri_source[0]-self.base_len, tri_source[1])
+                pt3 = (tri_source[0]+self.base_len, tri_source[1])
+            elif arrow_orientation == DOWN:
+                pt1 = (tri_source[0]+self.base_len, tri_source[1])
+                pt3 = (tri_source[0]-self.base_len, tri_source[1])
+            elif arrow_orientation == LEFT:
+                pt1 = (tri_source[0], tri_source[1]-self.base_len)
+                pt3 = (tri_source[0], tri_source[1]+self.base_len)
+            else:
+                pt1 = (tri_source[0], tri_source[1]+self.base_len)
+                pt3 = (tri_source[0], tri_source[1]-self.base_len)
+
             triangle_cnt = np.array( [pt1, pt3] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
         else:
-            triangle_cnt = np.array( [pt1, pt2, pt3] )
-            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
+
+            adjust_dist = 4
+
+            if arrow_orientation == UP:
+                pt1 = (tri_source[0]-self.base_len, tri_source[1]+self.tip_len-adjust_dist)
+                pt2 = (tri_source[0], tri_source[1]-adjust_dist)
+                pt3 = (tri_source[0]+self.base_len, tri_source[1]+self.tip_len-adjust_dist)
+            elif arrow_orientation == DOWN:
+                pt1 = (tri_source[0]+self.base_len, tri_source[1]-self.tip_len+adjust_dist)
+                pt2 = (tri_source[0], tri_source[1]+adjust_dist)
+                pt3 = (tri_source[0]-self.base_len, tri_source[1]-self.tip_len+adjust_dist)
+            elif arrow_orientation == LEFT:
+                pt1 = (tri_source[0]+self.tip_len-adjust_dist, tri_source[1]-self.base_len)
+                pt2 = (tri_source[0]-adjust_dist, tri_source[1])
+                pt3 = (tri_source[0]+self.tip_len-adjust_dist, tri_source[1]+self.base_len)
+            else:
+                pt1 = (tri_source[0]-self.tip_len+adjust_dist, tri_source[1]+self.base_len)
+                pt2 = (tri_source[0]+adjust_dist, tri_source[1])
+                pt3 = (tri_source[0]-self.tip_len+adjust_dist, tri_source[1]-self.base_len)
+
+
+            if np.random.randint(2):
+
+                triangle_cnt = np.array( [pt1, pt2, pt3] )
+                cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
+            else:
+
+                triangle_cnt = np.array( [pt1, pt2, pt3] )
+                cv2.polylines(img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
 
     # if slope is 'soft', then calculate appropriate indicator orientation
     else:
@@ -318,34 +348,58 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
         base_rise = math.floor(base_rise)
         base_run = math.floor(base_run)
 
+        # just flip the rise/run used for tip and apply it to base points
+
 
         pt1 = (tri_source[0]-base_run, tri_source[1]+base_rise)
         pt3 = (tri_source[0]+base_run, tri_source[1]-base_rise)
 
-        if arrow_orientation == RIGHT:
-            pt2 = (tri_source[0]+tip_run, tri_source[1]-tip_rise)
-        elif arrow_orientation == LEFT:
-            pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
-        elif arrow_orientation == DOWN:
-            # adjust tip_run & tip_rise for positive or negative slope
-            if tip_rise < 0:
-                tip_rise *= -1
-                tip_run *= -1
-            pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
-        elif arrow_orientation == UP:
-            # adjust tip_run & tip_rise for positive or negative slope on UP arrow
-            # don't have to adjust base_rise & base_run for since pt1 and pt3 just flip
-            if tip_rise > 0:
-                tip_rise *= -1
-                tip_run *= -1
-            pt2 = (tri_source[0]-tip_run, tri_source[1]+tip_rise)
+        if self.indicator == ACTIVATE:
+
+            if arrow_orientation == RIGHT:
+
+                pt1 = (tri_source[0]-base_run-int(round(tip_run*.75)), tri_source[1]+base_rise+int(round(tip_rise*.75)))
+                pt3 = (tri_source[0]+base_run-int(round(tip_run*.75)), tri_source[1]-base_rise+int(round(tip_rise*.75)))
+
+                pt2 = (tri_source[0]+int(round(tip_run*.25)), tri_source[1]-int(round(tip_rise*.25)))
+            elif arrow_orientation == LEFT:
+
+                pt1 = (tri_source[0]-base_run+int(round(tip_run*.75)), tri_source[1]+base_rise-int(round(tip_rise*.75)))
+                pt3 = (tri_source[0]+base_run+int(round(tip_run*.75)), tri_source[1]-base_rise-int(round(tip_rise*.75)))
+
+                pt2 = (tri_source[0]-int(round(tip_run*.25)), tri_source[1]+int(round(tip_rise*.25)))
+            elif arrow_orientation == DOWN:
+                # adjust tip_run & tip_rise for positive or negative slope
+                if tip_rise < 0:
+                    tip_rise *= -1
+                    tip_run *= -1
+
+                pt1 = (tri_source[0]-base_run+int(round(tip_run*.75)), tri_source[1]+base_rise-int(round(tip_rise*.75)))
+                pt3 = (tri_source[0]+base_run+int(round(tip_run*.75)), tri_source[1]-base_rise-int(round(tip_rise*.75)))
+
+                pt2 = (tri_source[0]-int(round(tip_run*.25)), tri_source[1]+int(round(tip_rise*.25)))
+            elif arrow_orientation == UP:
+                # adjust tip_run & tip_rise for positive or negative slope on UP arrow
+                # don't have to adjust base_rise & base_run for since pt1 and pt3 just flip
+                if tip_rise > 0:
+                    tip_rise *= -1
+                    tip_run *= -1
+
+                pt1 = (tri_source[0]-base_run+int(round(tip_run*.75)), tri_source[1]+base_rise-int(round(tip_rise*.75)))
+                pt3 = (tri_source[0]+base_run+int(round(tip_run*.75)), tri_source[1]-base_rise-int(round(tip_rise*.75)))
+                
+                pt2 = (tri_source[0]-int(round(tip_run*.25)), tri_source[1]+int(round(tip_rise*.25)))
 
         if self.indicator == INHIBIT:
             triangle_cnt = np.array( [pt1, pt3] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
         else:
-            triangle_cnt = np.array( [pt1, pt2, pt3] )
-            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
+            if np.random.randint(2):
+                triangle_cnt = np.array( [pt1, pt2, pt3] )
+                cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
+            else:
+                triangle_cnt = np.array( [pt1, pt2, pt3] )
+                cv2.polylines(img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
 
     # get bbox dims for corresponding indicator
     if self.indicator == INHIBIT:
@@ -817,8 +871,8 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     
     
 
-    return img,relationship_bbox,placed_entities1,placed_entities2
-
+    return img,indicator_bbox,placed_entities1,placed_entities2
+ 
 def radial_profile(data, center):
 
     """
@@ -1090,7 +1144,7 @@ def set_relationship_config(self):
     
     self.thickness = random.randint(1, 3)
     self.base_len = random.randint(self.thickness+5, 15)
-    self.tip_len = random.randint(self.base_len, 16)
+    self.tip_len = random.randint(self.base_len, 22)
 
     # self.tip_len = random.randint(5, 15)
     # self.base_len = random.randint(5, 21-(20-self.tip_len))
