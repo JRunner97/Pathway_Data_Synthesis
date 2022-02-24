@@ -1,50 +1,21 @@
 import numpy as np
-from scipy.interpolate import make_interp_spline
 import os
-import label_file
 import cv2
 import threading
-from numpy import inf
-import copy
 import math
 import string
 import random
-from scipy import stats
-import skimage.draw as draw
-import matplotlib.pyplot as plt
 from PIL import ImageFont, ImageDraw, Image
-
-X_ORIENTATION = 0
-Y_ORIENTATION = 1
-
-START = 0
-END = 1
-
-UP = 0
-DOWN = 1
-LEFT = 2
-RIGHT = 3
-
-INHIBIT = 0
-ACTIVATE = 1
-
-LINE = 0
-ARCH = 1
-CORNER = 2
-
-LONG = 0
-TALL = 1
-DOWN_SLASH = 2
-UP_SLASH = 3
+import json
 
 ELLIPSE = 0
 RECT = 1
 NO_SHAPE = 2
 
-
 def randomword(length):
    letters = string.ascii_lowercase
    return ''.join(random.choice(letters) for i in range(length))
+
 
 def draw_text(self,c_entity,slice_shape):
 
@@ -63,7 +34,7 @@ def draw_text(self,c_entity,slice_shape):
     img = img.astype(np.uint8)
 
     self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-    self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
+    self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2],0)
 
     current_center = [int(w1/2),int(h1/2)]
 
@@ -73,8 +44,8 @@ def draw_text(self,c_entity,slice_shape):
 
     # location is center
     # x1,y1 is top left corner
-    x1 = current_center[0] - math.floor(w/2) - self.text_margin
-    y1 = current_center[1] - math.floor(h/2) - self.text_margin
+    x1 = current_center[0] - int(round(w/2)) - self.text_margin
+    y1 = current_center[1] - int(round(h/2)) - self.text_margin
 
     if c_entity['type'] == ELLIPSE:
         img = cv2.ellipse(img, tuple(current_center), (math.floor(w*.80),h), 0, 0, 360, self.textbox_background, -1)
@@ -90,7 +61,7 @@ def draw_text(self,c_entity,slice_shape):
     b,g,r,a = 0,255,0,0
     img_pil = Image.fromarray(img)
     draw = ImageDraw.Draw(img_pil)
-    draw.text((x1 + self.text_margin, y1 + self.text_margin), label, font=c_entity['font'], fill=(b, g, r, a))
+    draw.text((x1 + self.text_margin, y1 + h + self.text_margin), label, font=c_entity['font'], fill=self.text_color, anchor='lb')
     img = np.array(img_pil)
 
     return img
@@ -113,6 +84,8 @@ class ocr_child_thread(threading.Thread):
         threading.Thread.__init__(self)
         self.copyID = copyID
         self.name = name
+        f = open('exHUGO_latest.json')
+        self.gene_dict = json.load(f)
 
     def run(self):
 
@@ -125,8 +98,9 @@ class ocr_child_thread(threading.Thread):
         self = set_text_config(self)
 
         # get random word and randomly capitalize
-        cluster_str_len = np.random.randint(1,20)
-        cluster_label = randomword(cluster_str_len)
+        # cluster_str_len = np.random.randint(1,20)
+        # cluster_label = randomword(cluster_str_len)
+        cluster_label = random.choice(self.gene_dict)
         cluster_label = ''.join(random.choice((str.upper, str.lower))(c) for c in cluster_label)
 
         # load font and get text size
