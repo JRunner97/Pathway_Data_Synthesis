@@ -617,15 +617,6 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
     x_span = spline_points[:,0]
     y_span = spline_points[:,1]
 
-    # add noise in better way
-    # x_noise = np.random.randint(0,20,(1,))
-    # y_noise = np.random.randint(0,20,(1,))
-    # x_span[1] = x_span[1] + x_noise
-    # y_span[1] = y_span[1] + y_noise
-    # x_span[2] = x_span[2] + x_noise
-    # y_span[2] = y_span[2] + y_noise
-
-
     return x_span,y_span
 
 def check_ellipse_point( h, k, x, y, a, b):
@@ -871,7 +862,7 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     
     
 
-    return img,indicator_bbox,placed_entities1,placed_entities2
+    return img,relationship_bbox,placed_entities1,placed_entities2
  
 def radial_profile(data, center):
 
