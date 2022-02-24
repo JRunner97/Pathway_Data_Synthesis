@@ -17,8 +17,6 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 from synthetic_shapes import Synthetic_Ellipse, Synthetic_Rectangle, Synthetic_Shape
 
-X_ORIENTATION = 0
-Y_ORIENTATION = 1
 
 START = 0
 END = 1
@@ -37,15 +35,8 @@ LINE = 0
 ARCH = 1
 CORNER = 2
 
-LONG = 0
-TALL = 1
 DOWN_SLASH = 2
 UP_SLASH = 3
-
-ELLIPSE = 0
-RECT = 1
-NO_SHAPE = 2
-POLYGON = 3
 
 
 def randomword(length):
@@ -420,19 +411,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
     return img, indicator_bbox
 
 
-def draw_textbox(self,img,current_entitiy,location):
-
-    '''
-    
-    location is shape center
-    
-    '''
-
-    # self,img,current_entitiy['label'],current_center,current_entitiy['width'],current_entitiy['height']
-
-    label = current_entitiy.label
-    w = current_entitiy.width
-    h = current_entitiy.height
+def draw_textbox(img,current_entitiy):
 
     """
 
@@ -451,24 +430,26 @@ def draw_textbox(self,img,current_entitiy,location):
             bbox (list): 2D-list with bbox corners for spline and indicator as [[x,y],[x,y]]
             
     """
+    # get text label and textbox dims
+    label = current_entitiy.label
+    w = current_entitiy.width
+    h = current_entitiy.height
 
-    img = current_entitiy.draw_shape(img,location)
+    # draw entity shape
+    img = current_entitiy.draw_shape(img,current_entitiy.center)
 
-    # location is center
-    # x1,y1 is top left corner
-    x1 = location[0] - int(round(w/2)) - current_entitiy.text_margin
-    y1 = location[1] - int(round(h/2)) - current_entitiy.text_margin
+    # x1,y1 is top left corner of textbox w/ textmargin
+    x1 = current_entitiy.center[0] - int(round(w/2)) - current_entitiy.text_margin
+    y1 = current_entitiy.center[1] - int(round(h/2)) - current_entitiy.text_margin
 
+    # draw text
     img_pil = Image.fromarray(img)
     draw = ImageDraw.Draw(img_pil)
     draw.text((x1 + current_entitiy.text_margin, y1 + h + current_entitiy.text_margin), label, font=current_entitiy.font, fill=current_entitiy.text_color, anchor='lb')
     img = np.array(img_pil)
 
+    # calculate textbox label
     bbox = [[x1+current_entitiy.text_margin,y1+current_entitiy.text_margin],[x1 + current_entitiy.text_margin + w, y1 + current_entitiy.text_margin + h]]
-
-    # cv2.imshow('image3',img)
-    # cv2.waitKey(0)
-
 
     return img, bbox
 
@@ -590,29 +571,19 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
                 if count == tar_point:
                     end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
-
-    if entity_configuration == LONG or entity_configuration == TALL:
-
-        if np.random.randint(2):
-            # LINE
-            spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
-        else:
-            # ARCH
-            spline_points = get_arch_anchors(self,start_point,end_point)
-
+    # TODO:: do this better, maybe set multimodal distribution to pull from
+    rand_int = np.random.randint(3)
+    if rand_int == 0 and abs(entity1_center[0]-entity2_center[0]) > 70 and abs(entity1_center[1]-entity2_center[1]) > 70:
+        self.spline_type = CORNER
+        spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
+    elif rand_int == 1:
+        # ARCH
+        self.spline_type = ARCH
+        spline_points = get_arch_anchors(self,start_point,end_point)
     else:
-
-        # TODO:: do this better, maybe set multimodal distribution to pull from
-        rand_int = np.random.randint(3)
-        if rand_int == 0 and abs(entity1_center[0]-entity2_center[0]) > 70 and abs(entity1_center[1]-entity2_center[1]) > 70:
-            self.spline_type = CORNER
-            spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
-        elif rand_int == 1:
-            # ARCH
-            spline_points = get_arch_anchors(self,start_point,end_point)
-        else:
-            # LINE
-            spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
+        # LINE
+        self.spline_type = LINE
+        spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
 
     x_span = spline_points[:,0]
     y_span = spline_points[:,1]
@@ -711,17 +682,26 @@ def get_square(self,a,b):
 
     return rows, cols
 
-def draw_cluster(entity1,current_entitiy,placed_entities,img):
+def get_cluster_arrangement(current_entitiy,placed_entities):
 
-    # get placed cluster mask
-    cluster_mask = np.zeros((1000,1000,1), np.float32)
-    for entity in placed_entities:
-        cluster_mask = entity.draw_shape(cluster_mask.astype(np.uint8),[entity.center[0]+500,entity.center[1]+500],(255,255,255),(255,255,255))
+    '''
+    get placement of new entity in cluster
+    '''
 
+
+
+    entity1 = placed_entities[0]
     entity1_center = entity1.center
 
     # get shape 1 and 2
     shape1_x,shape1_y = entity1.get_points()
+
+    # get placed entities cluster mask
+    mask_dim = 1000
+    cluster_mask = np.zeros((mask_dim,mask_dim,1), np.float32)
+    for entity in placed_entities:
+        cluster_mask = entity.draw_shape(cluster_mask.astype(np.uint8),[entity.center[0]+(mask_dim/2),entity.center[1]+(mask_dim/2)],(255,255,255),(255,255,255))
+
 
     # TODO:: problem of unbalance direction sampling from sparse set of points from get_points()
     # select point from first entity in cluster and keep going in that dir until out of cluster
@@ -730,9 +710,9 @@ def draw_cluster(entity1,current_entitiy,placed_entities,img):
     while True:
         
         # get new entity mask
-        new_entity_mask = np.zeros((1000,1000,1), np.float32)
+        new_entity_mask = np.zeros((mask_dim,mask_dim,1), np.float32)
         test_center = [int(shape1_x[tmp_idx]*factor)+entity1_center[0],int(shape1_y[tmp_idx]*factor)+entity1_center[1]]
-        new_entity_mask = current_entitiy.draw_shape(new_entity_mask.astype(np.uint8),[test_center[0]+500,test_center[1]+500],(255,255,255),(255,255,255))
+        new_entity_mask = current_entitiy.draw_shape(new_entity_mask.astype(np.uint8),[test_center[0]+(mask_dim/2),test_center[1]+(mask_dim/2)],(255,255,255),(255,255,255))
         
         # check iou
         mul_mask = np.multiply(cluster_mask.astype(np.int32),new_entity_mask.astype(np.int32))
@@ -747,9 +727,9 @@ def draw_cluster(entity1,current_entitiy,placed_entities,img):
 
     new_center = [int(shape1_x[tmp_idx]*factor)+entity1_center[0],int(shape1_y[tmp_idx]*factor)+entity1_center[1]]
 
-    return new_center, img
+    return new_center
 
-def draw_relationship(self,img,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,text1_shape,text2_shape):
+def draw_relationship(self,img,cluster1_center,cluster2_center,entity_configuration,placed_entities1,placed_entities2,cluster1_shape,cluster2_shape):
 
     """
 
@@ -758,12 +738,10 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
         Args:
             self: contains hyperparameter config
             img (np.Array): copied template image for stitching
-            entity1_center (list): contains target center of cluster1 bbox as [entity1_center_x,entity1_center_y]
-            entity2_center (list): contains target center of cluster2 bbox as [entity2_center_x,entity2_center_y]
-            text1_shape (list): contains target dimensions of text to place as [w1,h1]
-            text2_shape (list): contains target dimensions of text to place as [w2,h2]
-            label1 (str): text to place as entity1 
-            label2 (str): text to place as entity2     
+            cluster1_center (list): contains target center of cluster1 bbox as [entity1_center_x,entity1_center_y]
+            cluster2_center (list): contains target center of cluster2 bbox as [entity2_center_x,entity2_center_y]
+            cluster1_shape (list): contains target dimensions of text to place as [w1,h1]
+            cluster2_shape (list): contains target dimensions of text to place as [w2,h2]  
         
         Return:
             img (np.Array): updated image with entities, spline, and indicator drawn on it
@@ -772,75 +750,35 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     """
 
     
-    w1 = text1_shape[0]
-    h1 = text1_shape[1]
+    w1 = cluster1_shape[0]
+    h1 = cluster1_shape[1]
     # iteratively place cluster entities
     for idx in range(len(placed_entities1)):
-
-        current_entitiy = placed_entities1[idx]
-
-        current_entitiy.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-        current_entitiy.text_color = (255 - current_entitiy.textbox_background[0], 255 - current_entitiy.textbox_background[1], 255 - current_entitiy.textbox_background[2])
-
-        current_center = [current_entitiy.center[0] + entity1_center[0] - int(w1/2),current_entitiy.center[1] + entity1_center[1] - int(h1/2)]
-        img, tmp_bbox = draw_textbox(self,img,current_entitiy,current_center)
-
+        img, tmp_bbox = draw_textbox(img,placed_entities1[idx])
         placed_entities1[idx].bbox = tmp_bbox
 
-        # img = cv2.rectangle(img, tuple([int(current_center[0]-current_entitiy['width']*.8),current_center[1]-current_entitiy['height']]),tuple([int(current_center[0]+current_entitiy['width']*.8),current_center[1]+current_entitiy['height']]),(255,0,0),1)
-        # img = cv2.rectangle(img, tuple([tmp_bbox[0][0],tmp_bbox[0][1]]),tuple([tmp_bbox[1][0],tmp_bbox[1][1]]),(255,0,0),1)
-
-
-    # img = cv2.circle(img,tuple(entity1_center),2,(255,0,0),1)
-
-    w1 = text1_shape[0]
-    h1 = text1_shape[1]
-    entity1_bbox = [[int(entity1_center[0]-(w1/2)),int(entity1_center[1]-(h1/2))],[int(entity1_center[0]+(w1/2)),int(entity1_center[1]+(h1/2))]]
-
-    # img = cv2.rectangle(img, tuple([entity1_center[0] - int(w1/2),entity1_center[1] - int(h1/2)]),tuple([entity1_center[0] + int(w1/2),entity1_center[1] + int(h1/2)]),(0,255,0),1)
+    cluster1_bbox = [[int(cluster1_center[0]-(w1/2)),int(cluster1_center[1]-(h1/2))],[int(cluster1_center[0]+(w1/2)),int(cluster1_center[1]+(h1/2))]]
 
     
-    w2 = text2_shape[0]
-    h2 = text2_shape[1]
+    w2 = cluster2_shape[0]
+    h2 = cluster2_shape[1]
     # iteratively place cluster entities
     for idx in range(len(placed_entities2)):
-
-        current_entitiy = placed_entities2[idx]
-
-        current_entitiy.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
-        current_entitiy.text_color = (255 - current_entitiy.textbox_background[0], 255 - current_entitiy.textbox_background[1], 255 - current_entitiy.textbox_background[2])
-
-        current_center = [current_entitiy.center[0] + entity2_center[0] - int(w2/2),current_entitiy.center[1] + entity2_center[1] - int(h2/2)]
-        img, tmp_bbox = draw_textbox(self,img,current_entitiy,current_center)
-
+        img, tmp_bbox = draw_textbox(img,placed_entities2[idx])
         placed_entities2[idx].bbox = tmp_bbox
 
-        # img = cv2.rectangle(img, tuple([int(current_center[0]-current_entitiy['width']*.8),current_center[1]-current_entitiy['height']]),tuple([int(current_center[0]+current_entitiy['width']*.8),current_center[1]+current_entitiy['height']]),(255,0,0),1)
+    cluster2_bbox = [[int(cluster2_center[0]-(w2/2)),int(cluster2_center[1]-(h2/2))],[int(cluster2_center[0]+(w2/2)),int(cluster2_center[1]+(h2/2))]]
 
-    # img = cv2.circle(img,tuple(entity2_center),2,(255,0,0),1)
- 
-    w2 = text2_shape[0]
-    h2 = text2_shape[1]
-    entity2_bbox = [[int(entity2_center[0]-(w2/2)),int(entity2_center[1]-(h2/2))],[int(entity2_center[0]+(w2/2)),int(entity2_center[1]+(h2/2))]]
-
-    # img = cv2.rectangle(img, tuple([entity2_center[0] - int(w2/2),entity2_center[1] - int(h2/2)]),tuple([entity2_center[0] + int(w2/2),entity2_center[1] + int(h2/2)]),(0,255,0),1)
 
     # force anchors to be outside of cluster bboxes
-
-    try:
-        x_span,y_span = get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration)
-    except Exception as e:
-        print("BAHAHAH")
-        print(e)
-        raise ValueError
-
+    # TODO:: clean up this code
+    x_span,y_span = get_spline_anchors(self,cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox,entity_configuration)
 
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
 
-
     img, indicator_bbox = draw_indicator(self,img,x_span,y_span,f,orientation)
 
-
+    # get indiactor bbox
     min_x = int(indicator_bbox[0][0]) - 3
     min_y = int(indicator_bbox[0][1]) - 3
     max_x = int(indicator_bbox[1][0]) + 3
@@ -853,14 +791,8 @@ def draw_relationship(self,img,entity1_center,entity2_center,entity_configuratio
     max_x = int(max([spline_bbox[1][0]+5,indicator_bbox[2][0]]))
     max_y = int(max([spline_bbox[1][1]+5,indicator_bbox[2][1]]))
 
-
     # if want relationship_bbox instead of indicator just return this in its place
     relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
-
-
-    
-    
-    
 
     return img,relationship_bbox,placed_entities1,placed_entities2
  
@@ -922,6 +854,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
     if np.all(template_slice == template_slice[0,0,0]):
         return True
 
+    # convert to frequency domain
     grey_slice = cv2.cvtColor(template_slice, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(grey_slice)
     fshift = np.fft.fftshift(f)
@@ -939,113 +872,68 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
     idx = range(0,radial_prof.shape[0])
     bin_means = stats.binned_statistic(idx, radial_prof, 'mean', bins=4)[0]
 
-    # cv2.imshow('image',template_slice)
-    # cv2.waitKey(0)
-
-    # cv2.imshow('grey image',grey_slice)
-    # cv2.waitKey(0)
-
-    # cv2.imshow('image2',magnitude_spectrum)
-    # cv2.waitKey(0)
-
-    # xs = np.array(range(radial_prof.shape[0]))
-    # plt.plot(xs, radial_prof)
-    # plt.show()
-
     if bin_means[-1] < threshold and bin_means[-2] < threshold:
-        
         return True
     else:
         return False
 
                     
-def get_entity_placement(slice_shape,x_target,y_target,text1_shape,text2_shape,template_im):
+def get_entity_placement(slice_shape,x_target,y_target,cluster1_shape,cluster2_shape,placed_entities1,placed_entities2):
 
     """
 
         find positions to place entities
 
         Args:
-            self: contains hyperparameter config
             slice_shape (list): contains dimensions of target region as [x_dim,y_dim]
             x_target (int): top-left corner x placement location 
             y_target (int): top-left corner y placement location 
-            label1 (str): text to place as entity1 
-            label2 (str): text to place as entity2     
+            cluster1_shape (tuple): (w,h) of cluster 1
+            cluster2_shape (tuple): (w,h) of cluster 2     
         
         Return:
             entity1_center (list): contains target center of entity1 bbox as [entity1_center_x,entity1_center_y]
             entity2_center (list): contains target center of entity2 bbox as [entity2_center_x,entity2_center_y]
-            text1_shape (list): contains target dimensions of text to place as [w1,h1]
-            text2_shape (list): contains target dimensions of text to place as [w2,h2]
     """
 
     # For the text background
     # Finds space required by the text so that we can put a background with that amount of width
-    (w1, h1) = text1_shape
-    (w2, h2) = text2_shape
+    (w1, h1) = cluster1_shape
+    (w2, h2) = cluster2_shape
 
-    # 4 configurations/positioning: hotdog, hamburger, square1, square2
-    # dim_ratio = slice_shape[0] / slice_shape[1]
-    # if dim_ratio > 1.67:
-
-    #     # print('cluster width')
-    #     # print(w1)
-
-    #     # LONG
-    #     entity1_center_y = math.floor(slice_shape[1] / 2) + y_target
-    #     entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
-
-    #     # template_im = cv2.circle(template_im, (entity1_center_x,entity1_center_y), math.floor(w1/2), self.arrow_color, -1)  
-
-    #     # template_im = cv2.circle(template_im, (x_target,y_target), 20, self.arrow_color, -1)  
-
-    #     entity2_center_y = entity1_center_y
-    #     entity2_center_x = x_target + math.floor(w2/2)
-
-
-
-    #     entity_configuration = LONG
-
-
-    # elif dim_ratio < .6:
-    #     # TALL
-    #     entity1_center_x = math.floor(slice_shape[0] / 2) + x_target
-    #     entity1_center_y = y_target + math.floor(h1/2)
-
-    #     entity2_center_x = entity1_center_x
-    #     entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
-
-    #     entity_configuration = TALL
-
-
-    # else:
+    # 2 configurations/positioning: square1, square2
     # DOWN_SLASH
     if np.random.randint(2):
-        entity1_center_x = x_target + math.floor(w1/2)
-        entity1_center_y = y_target + math.floor(h1/2)
+        cluster1_center_x = x_target + math.floor(w1/2)
+        cluster1_center_y = y_target + math.floor(h1/2)
 
-        entity2_center_x = x_target + slice_shape[0] - math.floor(w2/2)
-        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
+        cluster2_center_x = x_target + slice_shape[0] - math.floor(w2/2)
+        cluster2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
 
         entity_configuration = DOWN_SLASH
     # UP_SLASH
     else:
-        entity1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
-        entity1_center_y = y_target + math.floor(h1/2)
+        cluster1_center_x = x_target + slice_shape[0] - math.floor(w1/2)
+        cluster1_center_y = y_target + math.floor(h1/2)
 
-        entity2_center_x = x_target + math.floor(w2/2)
-        entity2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
+        cluster2_center_x = x_target + math.floor(w2/2)
+        cluster2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
 
         entity_configuration = UP_SLASH
 
 
-    entity1_center = [entity1_center_x,entity1_center_y]
-    entity2_center = [entity2_center_x,entity2_center_y]
+    cluster1_center = [cluster1_center_x,cluster1_center_y]
+    cluster2_center = [cluster2_center_x,cluster2_center_y]
 
-    return entity1_center, entity2_center, entity_configuration,template_im
+    # update entity centers to be relative to image
+    for entity in placed_entities1:
+        entity.center = [entity.center[0] + cluster1_center[0] - int(w1/2),entity.center[1] + cluster1_center[1] - int(h1/2)]
+    for entity in placed_entities2:
+        entity.center = [entity.center[0] + cluster2_center[0] - int(w1/2),entity.center[1] + cluster2_center[1] - int(h1/2)]
 
-def get_entities(self,num_entities,img):
+    return cluster1_center, cluster2_center, entity_configuration
+
+def get_entities(self,num_entities):
 
     # get cluster entities to place
     c_entities = []
@@ -1056,14 +944,7 @@ def get_entities(self,num_entities,img):
         cluster_label = randomword(cluster_str_len).upper()
 
         # instantiate shape
-        # entity_type = random.choice([RECT, ELLIPSE, POLYGON])
-        entity_type = POLYGON
-        if entity_type == RECT:
-            c_entity = Synthetic_Rectangle([0,0],cluster_label)
-        elif entity_type == ELLIPSE:
-            c_entity = Synthetic_Ellipse([0,0],cluster_label)
-        elif entity_type == POLYGON:
-            c_entity = Synthetic_Shape([0,0],cluster_label)
+        c_entity = Synthetic_Shape([0,0],cluster_label)
 
         # load font and get text size
         fontpath = os.path.join(self.font_folder, self.font_style)    
@@ -1077,30 +958,16 @@ def get_entities(self,num_entities,img):
         c_entities.append(copy.deepcopy(c_entity))
 
 
+    # get cluster entities arangment
     placed_entities = [c_entities[0]]
-    entity1 = c_entities[0]
-
-
+    min_x, max_x, min_y, max_y = c_entities[0].get_min_max()
     for current_entitiy in c_entities[1:]:
-
-        new_center,img = draw_cluster(entity1,current_entitiy,placed_entities,img)
+        new_center = get_cluster_arrangement(current_entitiy,placed_entities)
         current_entitiy.center = new_center
         placed_entities.append(current_entitiy)
 
-
-    # get shape of cluster
-    min_x = 10000
-    max_x = -10000
-    min_y = 100000
-    max_y = -100000
-    sum_x = 0
-    sum_y = 0
-    for entity in c_entities:
-
-        # TODO:: may be different for other shapes
-        # **********************************************************************************************************
-        tmp_min_x, tmp_max_x, tmp_min_y, tmp_max_y = entity.get_min_max()
-
+        # get shape of cluster
+        tmp_min_x, tmp_max_x, tmp_min_y, tmp_max_y = current_entitiy.get_min_max()
 
         if tmp_min_x < min_x:
             min_x = tmp_min_x
@@ -1111,41 +978,28 @@ def get_entities(self,num_entities,img):
         if tmp_max_y > max_y:
             max_y = tmp_max_y
 
-        sum_x += entity.center[0]
-        sum_y += entity.center[1]
-
-    # adjust reference from first entity to top-left corner
-    avg_x = sum_x / len(c_entities)
-    avg_y = sum_y / len(c_entities)
-    for idx in range(len(c_entities)):
-        c_entities[idx].center[0] = int(c_entities[idx].center[0] + abs(min_x))
-        c_entities[idx].center[1] = int(c_entities[idx].center[1] + abs(min_y))
-        
-    
+    # get dims of cluster
     w1 = int(abs(min_x) + abs(max_x))
     h1 = int(abs(min_y) + abs(max_y))
     cluster_shape = [w1,h1]
 
-    return placed_entities, cluster_shape, img
+    # adjust center reference from first entity to top-left corner of cluster
+    for idx in range(len(c_entities)):
+        c_entities[idx].center[0] = int(c_entities[idx].center[0] + abs(min_x))
+        c_entities[idx].center[1] = int(c_entities[idx].center[1] + abs(min_y))
+    
+    
+    return placed_entities, cluster_shape
 
 def set_relationship_config(self):
     
     # set tip_len based on base_len 
-
-    
     self.thickness = random.randint(1, 3)
     self.base_len = random.randint(self.thickness+8, 15)
     self.tip_len = random.randint(self.base_len, 22)
-
-    # self.tip_len = random.randint(5, 15)
-    # self.base_len = random.randint(5, 21-(20-self.tip_len))
-
-        
     
     self.arrow_placement = random.choice([START, END])
-    # self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     self.arrow_color = (0, 0, 0)
-    # self.text_color = (0,0,0)
     # self.indicator = random.choice([INHIBIT, ACTIVATE])
     self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.arch_ratio = 0.1
@@ -1204,35 +1058,24 @@ class copy_thread(threading.Thread):
         }
         for relation_idx in range(50):
 
-            # change to remove setting CORNER
-            # make each entity config has set of possible arrows (eg. hotog has line and arch/ square has line, arch, and corner)
-
-            # TODO:: make set of names to pull from or characters
-            # TODO:: make background textbox color change, focus on light colors
-            # TODO:: include more dynamic variations of textbox (oval, no textbox)
-            # TODO:: dynamically change indicator length and width
-
             self = set_text_config(self)
 
             # num_entities = np.random.randint(1,5)
             num_entities = 1
             # text shape is actually cluster shape dimensions
-            placed_entities1, cluster1_shape,template_im = get_entities(self,num_entities,template_im)
+            placed_entities1, cluster1_shape = get_entities(self,num_entities)
             w1 = cluster1_shape[0]
             h1 = cluster1_shape[1]
 
             # num_entities = np.random.randint(1,5)
             num_entities = 1
-            placed_entities2, cluster2_shape,template_im = get_entities(self,num_entities,template_im)
+            placed_entities2, cluster2_shape = get_entities(self,num_entities)
             w2 = cluster2_shape[0]
             h2 = cluster2_shape[1]
 
 
-            # y_dim dependent on x_dim value
-            # TODO:: probably want to change this to make short tall and longs more likely
-            # dist1 = np.random.randint(0,50)
-            
-
+            # get shape of target region
+            # try to match g.t. relationship shape dist, but can't exactly since our generation needs z distance bewtween entities
             dim_rand = np.random.randint(6)
             if dim_rand < 2:
                 x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2
@@ -1241,6 +1084,7 @@ class copy_thread(threading.Thread):
                 y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2
                 x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
             else:
+                # more tall or long
                 if np.random.randint(2):
                     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([w1,w2])
                     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 50
@@ -1248,59 +1092,27 @@ class copy_thread(threading.Thread):
                     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([h1,h2])
                     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
 
-
-
-            # if np.random.randint(2):
-            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([w1,w2])
-            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 50
-            # else:
-            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([h1,h2])
-            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
-
-
-
-            # if np.random.randint(2):
-            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2
-            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 100
-            # else:
-            #     x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 100
-            #     y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2
-            # y_dim = np.random.randint(50-dist1,51) + h1 + h2
             slice_shape = [x_dim,y_dim]
 
-            # check if queried coords are a valid location
+            # repeately check if queried coords are a valid location
             for idx in range(50):
 
-                # subtracted max bounds to ensure valid coords
-
-                #// low>= high value error
-                # top left corner target
-                # print(template_im.shape)
-                # print(slice_shape)
+                # subtracted max bounds of shape to ensure valid coords
                 x_target = np.random.randint(0+self.padding,template_im.shape[1]-slice_shape[0]-self.padding)
                 y_target = np.random.randint(0+self.padding,template_im.shape[0]-slice_shape[1]-self.padding)
                 
                 # check if selected template area is good
                 if check_slice(template_im,slice_shape,x_target,y_target,self.padding):
 
-                    # template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
-
+                    # optionally show outline of queried region
                     # template_im = cv2.rectangle(template_im, (x_target-self.padding, y_target-self.padding), (x_target+x_dim+self.padding, y_target+y_dim+self.padding), (0,0,0), 1)
-                   
-                    self.spline_type = LINE
 
                     self = set_relationship_config(self)
-                    entity1_center,entity2_center,entity_configuration,template_im = get_entity_placement(slice_shape,x_target,y_target,(w1,h1),(w2,h2),template_im)
-                    
-                    try:
-                        template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,entity1_center,entity2_center,entity_configuration,placed_entities1,placed_entities2,cluster1_shape,cluster2_shape)
-                    except Exception as e: 
-                        print("CATS")
-                        print(e)
-                        continue
 
-                    # cv2.imshow('image3',template_im)
-                    # cv2.waitKey(0)
+                    cluster1_center,cluster2_center,entity_configuration = get_entity_placement(slice_shape,x_target,y_target,cluster1_shape,cluster2_shape,placed_entities1,placed_entities2)
+                    
+                    
+                    template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,cluster1_center,cluster2_center,entity_configuration,placed_entities1,placed_entities2,cluster1_shape,cluster2_shape)
 
                     shapes_1 = []
                     for entity in placed_entities1:
