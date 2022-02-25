@@ -155,16 +155,7 @@ def draw_spline(self,img,x_span,y_span):
             spline_bbox (list): 2D-list with bbox corners for spline as [[x,y],[x,y]]
             
     """
-    num_points = x_span.size
 
-    # if self.arrow_placement == END:
-    #     x_span = x_span[:num_points-2]
-    #     y_span = y_span[:num_points-2]
-    # else:
-    #     x_span = x_span[2:]
-    #     y_span = y_span[2:]
-
-    
     if self.spline_type == CORNER:
         spline_coef = x_span.size-2
     else:
@@ -203,7 +194,6 @@ def draw_spline(self,img,x_span,y_span):
         base_points = base_points[:arr_len-odd_out,:].reshape(-1,intervals,2)[::2].reshape(-1,2)
 
     spline_bbox = [[min_x,min_y],[max_x,max_y]]
-
 
     # draw spline
     for x,y in base_points:
@@ -519,7 +509,44 @@ def get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity
 
     return spline_points
 
-def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_bbox,entity_configuration):
+def get_start_end_points(cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox):
+
+    # TODO:: set num in linspace to be dependent on distance from one center to another
+    canidate_points = np.linspace(cluster1_center, cluster2_center, num=50, dtype=np.int)
+
+    # get start point for spline
+    # check for first nth point outside of entity boxes in direct line to other entity
+    tar_point = 5
+    count = 0
+    start_point = None
+    for idx in range(canidate_points.shape[0]-1):
+        current_point = canidate_points[idx,:]
+        # check if point is in box
+        if current_point[0] < cluster1_bbox[0][0] or current_point[1] < cluster1_bbox[0][1] or current_point[0] > cluster1_bbox[1][0] or current_point[1] > cluster1_bbox[1][1]:
+            count += 1
+            if count == tar_point:
+                start_point = [math.floor(current_point[0]),math.floor(current_point[1])]
+    
+    if not start_point:
+        start_point = [math.floor(canidate_points[10][0]),math.floor(canidate_points[10][1])]
+
+    # get end point for spline
+    count = 0
+    end_point = None
+    for idx in range(canidate_points.shape[0]-1,0,-1):
+        current_point = canidate_points[idx,:]
+        if current_point[0] < cluster2_bbox[0][0] or current_point[1] < cluster2_bbox[0][1] or current_point[0] > cluster2_bbox[1][0] or current_point[1] > cluster2_bbox[1][1]:
+            count += 1
+            if count == tar_point:
+                end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
+
+    if not end_point:
+        end_point = [math.floor(canidate_points[-10][0]),math.floor(canidate_points[-10][1])]
+
+    return start_point, end_point
+    
+
+def get_spline_anchors(self,cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox,entity_configuration):
 
     """
 
@@ -538,50 +565,21 @@ def get_spline_anchors(self,entity1_center,entity2_center,entity1_bbox,entity2_b
             
     """
 
-    # Dataset
-    # TODO:: set up to be several different classes of splines
-    # TODO:: add arched arrow
-    # TODO:: corner spline on squares
-
-    # TODO:: don't need top block for corners
-
-    # set num in linspace to be dependent on distance from one center to another
-    canidate_points = np.linspace(entity1_center, entity2_center, num=50, dtype=np.int)
-
-    # get start point for spline
-    # check for first nth point outside of entity boxes in direct line to other entity
-    tar_point = 5
-    count = 0
-    start_point = None
-    for idx in range(canidate_points.shape[0]-1):
-        current_point = canidate_points[idx,:]
-        if current_point[0] < entity1_bbox[0][0] or current_point[1] < entity1_bbox[0][1] or current_point[0] > entity1_bbox[1][0] or current_point[1] > entity1_bbox[1][1]:
-                count += 1
-                if count == tar_point:
-                    start_point = [math.floor(current_point[0]),math.floor(current_point[1])]
-
-    # get end point for spline
-    count = 0
-    # TODO:: end_point not getting set **************** bug
-    end_point = None
-    for idx in range(canidate_points.shape[0]-1,0,-1):
-        current_point = canidate_points[idx,:]
-        if current_point[0] < entity2_bbox[0][0] or current_point[1] < entity2_bbox[0][1] or current_point[0] > entity2_bbox[1][0] or current_point[1] > entity2_bbox[1][1]:
-                count += 1
-                if count == tar_point:
-                    end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
-
+    # TODO:: make classes for structures
     # TODO:: do this better, maybe set multimodal distribution to pull from
     rand_int = np.random.randint(3)
-    if rand_int == 0 and abs(entity1_center[0]-entity2_center[0]) > 70 and abs(entity1_center[1]-entity2_center[1]) > 70:
+    if rand_int == 0 and abs(cluster1_center[0]-cluster2_center[0]) > 70 and abs(cluster1_center[1]-cluster2_center[1]) > 70:
+        # CORNER
         self.spline_type = CORNER
-        spline_points = get_corner_anchors(entity_configuration,entity1_center,entity2_center,entity1_bbox,entity2_bbox)
+        spline_points = get_corner_anchors(entity_configuration,cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox)
     elif rand_int == 1:
         # ARCH
+        start_point, end_point = get_start_end_points(cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox)
         self.spline_type = ARCH
         spline_points = get_arch_anchors(self,start_point,end_point)
     else:
         # LINE
+        start_point, end_point = get_start_end_points(cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox)
         self.spline_type = LINE
         spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
 
@@ -771,7 +769,6 @@ def draw_relationship(self,img,cluster1_center,cluster2_center,entity_configurat
 
 
     # force anchors to be outside of cluster bboxes
-    # TODO:: clean up this code
     x_span,y_span = get_spline_anchors(self,cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox,entity_configuration)
 
     img, f, orientation, spline_bbox = draw_spline(self,img,x_span,y_span)
