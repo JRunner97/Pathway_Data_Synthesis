@@ -29,11 +29,11 @@ def draw_text(self,c_entity,slice_shape):
     h1 = slice_shape[1]
 
     img = np.ones((h1,w1,3), np.int32)
-    self.slice_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+    self.slice_background = (np.random.randint(200,255),np.random.randint(200,255),np.random.randint(200,255))
     img *= self.slice_background
     img = img.astype(np.uint8)
 
-    self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+    self.textbox_background = (np.random.randint(200,255),np.random.randint(200,255),np.random.randint(200,255))
     self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2],0)
 
     current_center = [int(w1/2),int(h1/2)]
@@ -118,16 +118,18 @@ class ocr_child_thread(threading.Thread):
         c_entity['type'] = random.choice([RECT, ELLIPSE, NO_SHAPE])
 
         # scale text size to get slice size
-        x_dim = math.floor(np.random.uniform(1,2.5) * c_entity['width'])
-        y_dim = math.floor(np.random.uniform(1.5,2.5) * c_entity['height'])
+        x_dim = np.random.randint(5,20) + c_entity['width'] + self.text_margin
+        y_dim = np.random.randint(5,20) + c_entity['height'] + self.text_margin
         slice_shape = [x_dim,y_dim]
 
         img = draw_text(self,c_entity,slice_shape)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 21, 10)
 
         # save txt and new image
         im_dir = "output_test"
         image_path = str(self.copyID) + ".png"
-        cv2.imwrite(os.path.join(im_dir, image_path), img)
+        cv2.imwrite(os.path.join(im_dir, image_path), thresh)
         file1 = open(os.path.join(im_dir, str(self.copyID) + ".txt"),"w")
         file1.write(c_entity['label'])
         file1.close() 
