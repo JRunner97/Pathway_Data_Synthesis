@@ -248,126 +248,71 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
     else:
         tri_source = [x_span[0],y_span[0]]
 
-    # img = cv2.circle(img, tuple(tri_source), 3, (40,255,0), -1)
+
+    # get shape
+    tmp_img = np.ones((500,500,3)) * 255
+    if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
+
+        pt1 = [250-self.base_len, 250]
+        pt3 = [250+self.base_len, 250]
+
+        triangle_cnt = np.array( [tuple(pt1), tuple(pt3)] )
+        cv2.drawContours(tmp_img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
+
+    else:
+
+        pt1 = [250-self.base_len, 250 + self.tip_len]
+        pt2 = [250, 250]
+        pt3 = [250+self.base_len, 250 + self.tip_len]
+        
+        triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
+        cv2.polylines(tmp_img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
+
+        #     triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
+        #     cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
+    
+
 
     # if slope is extreme, then just place simple inicator in cardinal direction
     if math.isnan(tip_slope) or abs(tip_slope) > 15 or abs(tip_slope) < 0.15:
 
-        if arrow_orientation == UP or arrow_orientation == DOWN:
-            pt1 = [tri_source[0]-self.base_len, tri_source[1]]
-            pt3 = [tri_source[0]+self.base_len, tri_source[1]]
-        else:
-            pt1 = [tri_source[0], tri_source[1]+self.base_len]
-            pt3 = [tri_source[0], tri_source[1]-self.base_len]
+        angle = 0
+        if arrow_orientation == DOWN:
+            angle = 180
+        elif arrow_orientation == LEFT:
+            angle = 90
+        elif arrow_orientation == RIGHT:
+            angle = 270
+                
+        image_center = ((tmp_img.shape[1] - 1) / 2, (tmp_img.shape[0] - 1) / 2)
+        rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+        tmp_img = cv2.warpAffine(tmp_img, rot_mat, tmp_img.shape[1::-1], flags=cv2.INTER_NEAREST)
 
-        if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
+        tmp_img = tmp_img[200:300,200:300,:]
 
-            triangle_cnt = np.array( [tuple(pt1), tuple(pt3)] )
-            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
-        else:
+        blk_idx = np.array(np.where((tmp_img!=[255,255,255]).all(axis=2))) - 50
+        blk_idx = (blk_idx[0]+tri_source[1],blk_idx[1]+tri_source[0])
 
-            adjust_dist = 4
-
-            if arrow_orientation == DOWN or arrow_orientation == RIGHT:
-                self.tip_len *= -1
-            
-            if arrow_orientation == UP or arrow_orientation == LEFT:
-                adjust_dist *= -1
-
-            if arrow_orientation == UP or arrow_orientation == DOWN:
-                pt1[1] += self.tip_len+adjust_dist
-                pt2 = [tri_source[0], tri_source[1]+adjust_dist]
-                pt3[1] += self.tip_len+adjust_dist
-            else:
-                pt1[0] += self.tip_len+adjust_dist
-                pt2 = [tri_source[0]+adjust_dist, tri_source[1]]
-                pt3[0] += self.tip_len+adjust_dist
-
-
-            if np.random.randint(2):
-                triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
-                cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
-            else:
-
-                triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
-                cv2.polylines(img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
+        img[blk_idx] = [0,0,0]
+    
 
     # if slope is 'soft', then calculate appropriate indicator orientation
     else:
 
-        # arrow base slope is just negative reciprocal
-        arrowhead_base_slpe = -1/tip_slope
+        tip_angle = 90 + math.degrees(math.atan(tip_slope))
 
-        # returned in radians
-        # get angle from slope in right triangle drawn by slopes of tip and base
-        tip_deg = math.atan(tip_slope)
-        base_deg = math.atan(arrowhead_base_slpe)
+        image_center = ((tmp_img.shape[1] - 1) / 2, (tmp_img.shape[0] - 1) / 2)
+        rot_mat = cv2.getRotationMatrix2D(image_center, tip_angle, 1.0)
+        tmp_img = cv2.warpAffine(tmp_img, rot_mat, tmp_img.shape[1::-1], flags=cv2.INTER_NEAREST)
 
-        # get location of arrowhead tip point w/ law of sines and similar triangles
-        tip_rise = self.tip_len * math.sin(tip_deg)
-        tip_run = tip_rise / tip_slope
-        tip_rise = math.floor(tip_rise)
-        tip_run = math.floor(tip_run)
+        tmp_img = tmp_img[200:300,200:300,:]
 
-        # get location of arrowhead base points w/ law of sines and similar triangles
-        # use similar triangles for run instead of pythogorean to avoid sign issues
-        base_rise = self.base_len * math.sin(base_deg)
-        base_run = base_rise / arrowhead_base_slpe
-        base_rise = math.floor(base_rise)
-        base_run = math.floor(base_run)
+        blk_idx = np.array(np.where((tmp_img!=[255,255,255]).all(axis=2))) - 50
+        blk_idx = (blk_idx[0]+tri_source[1],blk_idx[1]+tri_source[0])
 
-        # just flip the rise/run used for tip and apply it to base points
+        img[blk_idx] = [0,0,0]
 
-
-        pt1 = (tri_source[0]-base_run, tri_source[1]+base_rise)
-        pt3 = (tri_source[0]+base_run, tri_source[1]-base_rise)
-
-        if self.indicator == ACTIVATE or self.indicator == INDIRECT_ACTIVATE:
-
-            if arrow_orientation == RIGHT:
-
-                pt1 = (tri_source[0]-base_run-int(round(tip_run*.75)), tri_source[1]+base_rise+int(round(tip_rise*.75)))
-                pt3 = (tri_source[0]+base_run-int(round(tip_run*.75)), tri_source[1]-base_rise+int(round(tip_rise*.75)))
-
-                pt2 = (tri_source[0]+int(round(tip_run*.25)), tri_source[1]-int(round(tip_rise*.25)))
-            elif arrow_orientation == LEFT:
-
-                pt1 = (tri_source[0]-base_run+int(round(tip_run*.75)), tri_source[1]+base_rise-int(round(tip_rise*.75)))
-                pt3 = (tri_source[0]+base_run+int(round(tip_run*.75)), tri_source[1]-base_rise-int(round(tip_rise*.75)))
-
-                pt2 = (tri_source[0]-int(round(tip_run*.25)), tri_source[1]+int(round(tip_rise*.25)))
-            elif arrow_orientation == DOWN:
-                # adjust tip_run & tip_rise for positive or negative slope
-                if tip_rise < 0:
-                    tip_rise *= -1
-                    tip_run *= -1
-
-                pt1 = (tri_source[0]-base_run+int(round(tip_run*.75)), tri_source[1]+base_rise-int(round(tip_rise*.75)))
-                pt3 = (tri_source[0]+base_run+int(round(tip_run*.75)), tri_source[1]-base_rise-int(round(tip_rise*.75)))
-
-                pt2 = (tri_source[0]-int(round(tip_run*.25)), tri_source[1]+int(round(tip_rise*.25)))
-            elif arrow_orientation == UP:
-                # adjust tip_run & tip_rise for positive or negative slope on UP arrow
-                # don't have to adjust base_rise & base_run for since pt1 and pt3 just flip
-                if tip_rise > 0:
-                    tip_rise *= -1
-                    tip_run *= -1
-
-                pt1 = (tri_source[0]-base_run+int(round(tip_run*.75)), tri_source[1]+base_rise-int(round(tip_rise*.75)))
-                pt3 = (tri_source[0]+base_run+int(round(tip_run*.75)), tri_source[1]-base_rise-int(round(tip_rise*.75)))
-                
-                pt2 = (tri_source[0]-int(round(tip_run*.25)), tri_source[1]+int(round(tip_rise*.25)))
-
-        if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
-            triangle_cnt = np.array( [pt1, pt3] )
-            cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
-        else:
-            if np.random.randint(2):
-                triangle_cnt = np.array( [pt1, pt2, pt3] )
-                cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
-            else:
-                triangle_cnt = np.array( [pt1, pt2, pt3] )
-                cv2.polylines(img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
+        
 
     # get bbox dims for corresponding indicator
     if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
@@ -1231,32 +1176,32 @@ class template_thread(threading.Thread):
                 break
 
             child_thread0 = copy_thread(child_thread_idx,"child0",self.directory,filename)
-            child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
-            child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
-            child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
+            # child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
+            # child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
+            # child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
 
             child_thread0.start()
-            if (copy_idx*4) + 1 > num_copies:
-                stop_child_flag = True
-                continue
-            else:
-                child_thread1.start()
-            if (copy_idx*4) + 2 > num_copies:
-                stop_child_flag = True
-                continue
-            else:
-                child_thread2.start()
-            if (copy_idx*4) + 3 > num_copies:
-                stop_child_flag = True
-                continue
-            else:
-                child_thread3.start()
+            # if (copy_idx*4) + 1 > num_copies:
+            #     stop_child_flag = True
+            #     continue
+            # else:
+            #     child_thread1.start()
+            # if (copy_idx*4) + 2 > num_copies:
+            #     stop_child_flag = True
+            #     continue
+            # else:
+            #     child_thread2.start()
+            # if (copy_idx*4) + 3 > num_copies:
+            #     stop_child_flag = True
+            #     continue
+            # else:
+            #     child_thread3.start()
 
             child_thread0.join()
-            child_thread1.join()
-            child_thread2.join()
-            child_thread3.join()
-            # break
+            # child_thread1.join()
+            # child_thread2.join()
+            # child_thread3.join()
+            break
 
 
 def populate_figures():
@@ -1282,32 +1227,32 @@ def populate_figures():
             break
 
         thread0 = template_thread(template_idx,"thread-0",template_list,directory)
-        thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
-        thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
-        thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
+        # thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
+        # thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
+        # thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
 
         thread0.start()
-        if template_idx + 1 > len(template_list):
-            stop_flag = True
-            continue
-        else:
-            thread1.start()
-        if template_idx + 2 > len(template_list):
-            stop_flag = True
-            continue
-        else:
-            thread2.start()
-        if template_idx + 3 > len(template_list):
-            stop_flag = True
-            continue
-        else:
-            thread3.start()
+        # if template_idx + 1 > len(template_list):
+        #     stop_flag = True
+        #     continue
+        # else:
+        #     thread1.start()
+        # if template_idx + 2 > len(template_list):
+        #     stop_flag = True
+        #     continue
+        # else:
+        #     thread2.start()
+        # if template_idx + 3 > len(template_list):
+        #     stop_flag = True
+        #     continue
+        # else:
+        #     thread3.start()
 
         thread0.join()
-        thread1.join()
-        thread2.join()
-        thread3.join()
-        # break
+        # thread1.join()
+        # thread2.join()
+        # thread3.join()
+        break
 
 
 
