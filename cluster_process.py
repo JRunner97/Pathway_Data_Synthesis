@@ -250,59 +250,46 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
     # img = cv2.circle(img, tuple(tri_source), 3, (40,255,0), -1)
 
-
-    # TODO:: fine-tune these thresholds
     # if slope is extreme, then just place simple inicator in cardinal direction
     if math.isnan(tip_slope) or abs(tip_slope) > 15 or abs(tip_slope) < 0.15:
 
-        
+        if arrow_orientation == UP or arrow_orientation == DOWN:
+            pt1 = [tri_source[0]-self.base_len, tri_source[1]]
+            pt3 = [tri_source[0]+self.base_len, tri_source[1]]
+        else:
+            pt1 = [tri_source[0], tri_source[1]+self.base_len]
+            pt3 = [tri_source[0], tri_source[1]-self.base_len]
 
         if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
 
-            if arrow_orientation == UP:
-                pt1 = (tri_source[0]-self.base_len, tri_source[1])
-                pt3 = (tri_source[0]+self.base_len, tri_source[1])
-            elif arrow_orientation == DOWN:
-                pt1 = (tri_source[0]+self.base_len, tri_source[1])
-                pt3 = (tri_source[0]-self.base_len, tri_source[1])
-            elif arrow_orientation == LEFT:
-                pt1 = (tri_source[0], tri_source[1]-self.base_len)
-                pt3 = (tri_source[0], tri_source[1]+self.base_len)
-            else:
-                pt1 = (tri_source[0], tri_source[1]+self.base_len)
-                pt3 = (tri_source[0], tri_source[1]-self.base_len)
-
-            triangle_cnt = np.array( [pt1, pt3] )
+            triangle_cnt = np.array( [tuple(pt1), tuple(pt3)] )
             cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
         else:
 
             adjust_dist = 4
 
-            if arrow_orientation == UP:
-                pt1 = (tri_source[0]-self.base_len, tri_source[1]+self.tip_len-adjust_dist)
-                pt2 = (tri_source[0], tri_source[1]-adjust_dist)
-                pt3 = (tri_source[0]+self.base_len, tri_source[1]+self.tip_len-adjust_dist)
-            elif arrow_orientation == DOWN:
-                pt1 = (tri_source[0]+self.base_len, tri_source[1]-self.tip_len+adjust_dist)
-                pt2 = (tri_source[0], tri_source[1]+adjust_dist)
-                pt3 = (tri_source[0]-self.base_len, tri_source[1]-self.tip_len+adjust_dist)
-            elif arrow_orientation == LEFT:
-                pt1 = (tri_source[0]+self.tip_len-adjust_dist, tri_source[1]-self.base_len)
-                pt2 = (tri_source[0]-adjust_dist, tri_source[1])
-                pt3 = (tri_source[0]+self.tip_len-adjust_dist, tri_source[1]+self.base_len)
+            if arrow_orientation == DOWN or arrow_orientation == RIGHT:
+                self.tip_len *= -1
+            
+            if arrow_orientation == UP or arrow_orientation == LEFT:
+                adjust_dist *= -1
+
+            if arrow_orientation == UP or arrow_orientation == DOWN:
+                pt1[1] += self.tip_len+adjust_dist
+                pt2 = [tri_source[0], tri_source[1]+adjust_dist]
+                pt3[1] += self.tip_len+adjust_dist
             else:
-                pt1 = (tri_source[0]-self.tip_len+adjust_dist, tri_source[1]+self.base_len)
-                pt2 = (tri_source[0]+adjust_dist, tri_source[1])
-                pt3 = (tri_source[0]-self.tip_len+adjust_dist, tri_source[1]-self.base_len)
+                pt1[0] += self.tip_len+adjust_dist
+                pt2 = [tri_source[0]+adjust_dist, tri_source[1]]
+                pt3[0] += self.tip_len+adjust_dist
 
 
             if np.random.randint(2):
-
-                triangle_cnt = np.array( [pt1, pt2, pt3] )
+                triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
                 cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
             else:
 
-                triangle_cnt = np.array( [pt1, pt2, pt3] )
+                triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
                 cv2.polylines(img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
 
     # if slope is 'soft', then calculate appropriate indicator orientation
