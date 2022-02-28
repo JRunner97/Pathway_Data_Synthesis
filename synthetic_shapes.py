@@ -194,7 +194,8 @@ class Synthetic_Shape:
         self.font_size = random.randint(8, 20)
         self.text_margin = random.randint(5, 15)
         self.text_thickness = random.randint(1, 2)
-        self.textbox_background = (0,0,230)
+        self.textbox_background = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+        self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1], 255 - self.textbox_background[2])
         self.textbox_border_thickness = random.randint(0, 2)
 
         shape_source_dir = "shape_images"
@@ -205,6 +206,8 @@ class Synthetic_Shape:
         cnts = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         self.cnt = cnts[0][1]
         self.source_image_dims = image.shape
+
+    
 
     def draw_shape(self,img,center,textbox_background=None,textbox_border_thickness=None):
 
@@ -222,7 +225,8 @@ class Synthetic_Shape:
 
         pts = np.stack((cols,rows),axis=-1).astype(np.int32)
 
-        img = cv2.fillPoly(img, [pts], textbox_background)
+        if np.random.randint(2):
+            img = cv2.fillPoly(img, [pts], textbox_background)
         if np.random.randint(2):
             border_color = (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
             img = cv2.polylines(img, [pts], True, border_color, self.textbox_border_thickness)
