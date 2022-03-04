@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from PIL import ImageFont, ImageDraw, Image
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from synthetic_shapes import Synthetic_Ellipse, Synthetic_Rectangle, Synthetic_Shape
+from synthetic_shapes import Synthetic_Shape, Synthetic_Arrow
 
 
 START = 0
@@ -261,16 +261,9 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
     else:
 
-        pt1 = [250-self.base_len, 250 + self.tip_len]
-        pt2 = [250, 250]
-        pt3 = [250+self.base_len, 250 + self.tip_len]
-        
-        triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
-        cv2.polylines(tmp_img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
-
-        #     triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
-        #     cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
-    
+        my_arrow = Synthetic_Arrow()
+        tmp_img = my_arrow.draw_shape(tmp_img,[250,255])
+        my_arrow.center = tri_source
 
 
     # if slope is extreme, then just place simple inicator in cardinal direction
@@ -299,7 +292,18 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
     # if slope is 'soft', then calculate appropriate indicator orientation
     else:
 
-        tip_angle = 90 + math.degrees(math.atan(tip_slope))
+        # TODO:: debug problem w/ tip slope
+        angle = 90
+        if arrow_orientation == UP:
+            if tip_slope > 0:
+                angle = 270
+        elif arrow_orientation == DOWN:
+            if tip_slope < 0:
+                angle = 270
+        elif arrow_orientation == RIGHT:
+            angle = 270
+
+        tip_angle = angle + math.degrees(math.atan(tip_slope))
 
         image_center = ((tmp_img.shape[1] - 1) / 2, (tmp_img.shape[0] - 1) / 2)
         rot_mat = cv2.getRotationMatrix2D(image_center, tip_angle, 1.0)
@@ -312,6 +316,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
         img[blk_idx] = [0,0,0]
 
+
         
 
     # get bbox dims for corresponding indicator
@@ -322,11 +327,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
         max_x = max([pt1[0],pt3[0]]) + self.thickness + 2
         max_y = max([pt1[1],pt3[1]]) + self.thickness + 2
     else:
-        min_x = min([pt1[0],pt2[0],pt3[0]])
-        min_y = min([pt1[1],pt2[1],pt3[1]])
-
-        max_x = max([pt1[0],pt2[0],pt3[0]])
-        max_y = max([pt1[1],pt2[1],pt3[1]])
+        min_x, max_x, min_y, max_y = my_arrow.get_min_max()
 
     indicator_bbox = [[min_x,min_y],[max_x,max_y]]
 
@@ -929,7 +930,7 @@ def set_relationship_config(self):
     
     self.arrow_placement = random.choice([START, END])
     self.arrow_color = (0, 0, 0)
-    # self.indicator = random.choice([INHIBIT, ACTIVATE])
+    # self.indicator = random.choice([ACTIVATE])
     self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.arch_ratio = 0.1
     self.spline_type = LINE
