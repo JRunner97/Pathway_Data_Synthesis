@@ -143,6 +143,9 @@ class Synthetic_Shape:
 
         return mins[0], maxes[0], mins[1], maxes[1]
 
+def get_around(x):
+
+    return np.int32(round(x))
 
 class Synthetic_Arrow:
     def __init__(self):
@@ -151,8 +154,12 @@ class Synthetic_Arrow:
         # self.width = 80
         # self.height = 70
 
-        self.width = int(random.randint(self.thickness+8, 15) * 1.5)
-        self.height = random.randint(self.width, 25)
+
+        
+        # self.width = int(random.randint(8, 15) + (self.thickness*5))
+
+        # self.width = int(random.randint(9, 15-(7-self.thickness)) + (self.thickness*2))
+        self.height = random.randint(12-(3-self.thickness), 21-(9-self.thickness)) + self.thickness*2
 
         shape_source_dir = "arrow_images"
         shape_image = random.choice(os.listdir(shape_source_dir))
@@ -171,16 +178,20 @@ class Synthetic_Arrow:
         # get zero centered points
         cols, rows = self.get_points()
 
-        # send to new center
-        rows = rows + center[1]
+        pts = np.stack((cols,rows),axis=-1).astype(np.int32)
+        maxes = pts.max(axis=0)
+        mins = pts.min(axis=0)
+        min_y = mins[1]
+        max_y = maxes[1]
+        len_y = max_y - min_y
+
+        # send to new center with tip at top
+        rows = rows + center[1] + int(round(len_y/2))
         cols = cols + center[0]
 
         pts = np.stack((cols,rows),axis=-1).astype(np.int32)
 
         pts = [pts.reshape((-1,1,2))]
-
-        
-
 
         # TODO:: can probably smooth out big shape changes by drawing resized to pseudo image, take simple contours and polyline plot from there
         arrow_option = np.random.randint(2)
@@ -204,6 +215,8 @@ class Synthetic_Arrow:
 
         return img
 
+    
+
     def get_points(self):
 
         # get points of shape
@@ -219,12 +232,9 @@ class Synthetic_Arrow:
         len_y = max_y - min_y
 
         # zero center shape
-        center = [np.rint((len_x/2)+min_x),np.rint((len_y/2)+min_y)]
+        center = [(len_x/2)+min_x,(len_y/2)+min_y]
         rows = rows - center[1]
         cols = cols - center[0]
-
-        rows = np.rint(rows).astype(np.int32)
-        cols = np.rint(cols).astype(np.int32)
 
         # resize shape
         rows, cols = self.transform_points(rows, cols, len_x, len_y)
@@ -234,8 +244,12 @@ class Synthetic_Arrow:
     def transform_points(self,rows,cols,current_width,current_height):
 
         # transform base shape to be the desired dimensions
+        w_h_ratio = current_width / current_height
 
-        w_factor = self.width / current_width
+        tar_height = self.height
+        tar_width = w_h_ratio * tar_height
+
+        w_factor = tar_width / current_width
         h_factor = self.height / current_height
         
         transformed_cols = []
@@ -252,10 +266,11 @@ class Synthetic_Arrow:
         
         return transformed_rows, transformed_cols
 
-    def get_min_max(self):
+    def get_min_max(self,cols=None,rows=None):
 
-        # get zero centered points
-        cols, rows = self.get_points()
+        if cols is None or rows is None:
+            # get zero centered points
+            cols, rows = self.get_points()
 
         # send to new center
         rows = rows + self.center[1]
