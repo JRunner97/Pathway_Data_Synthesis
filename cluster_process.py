@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 from PIL import ImageFont, ImageDraw, Image
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from synthetic_shapes import Synthetic_Ellipse, Synthetic_Rectangle, Synthetic_Shape
+from synthetic_shapes import Synthetic_Shape, Synthetic_Arrow
+import time
 
 
 START = 0
@@ -103,6 +104,7 @@ def get_slope(self,base_points,source_point,x_span,y_span):
     # lag used to set which point along spline off of entity do we want to select as comparison point
 
     # lag = 10
+    # lag = int(0.1 * max_idx)
     lag = int(0.1 * max_idx)
     
     candidate_points = []
@@ -185,6 +187,12 @@ def draw_spline(self,img,x_span,y_span):
     min_y = np.min(base_points_y)
     max_y = np.max(base_points_y)
 
+    if math.dist([min_x,min_y],[max_x,max_y]) < 50:
+        if self.indicator == INDIRECT_ACTIVATE:
+            self.indicator = ACTIVATE
+        elif self.indicator == INDIRECT_INHIBIT:
+            self.indicator = INHIBIT
+
     # dashed interval dependent on spline width
     if self.indicator == INDIRECT_ACTIVATE or self.indicator == INDIRECT_INHIBIT:
         arr_len = base_points.shape[0]
@@ -249,6 +257,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
         tri_source = [x_span[0],y_span[0]]
 
 
+
     # get shape
     tmp_img = np.ones((500,500,3)) * 255
     if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
@@ -261,20 +270,13 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
     else:
 
-        pt1 = [250-self.base_len, 250 + self.tip_len]
-        pt2 = [250, 250]
-        pt3 = [250+self.base_len, 250 + self.tip_len]
-        
-        triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
-        cv2.polylines(tmp_img, [triangle_cnt], False, self.arrow_color, self.thickness*2)
-
-        #     triangle_cnt = np.array( [tuple(pt1), tuple(pt2), tuple(pt3)] )
-        #     cv2.drawContours(img, [triangle_cnt], 0, self.arrow_color, -1)
-    
+        my_arrow = Synthetic_Arrow()
+        tmp_img = my_arrow.draw_shape(tmp_img,[250,243])
+        my_arrow.center = tri_source
 
 
     # if slope is extreme, then just place simple inicator in cardinal direction
-    if math.isnan(tip_slope) or abs(tip_slope) > 15 or abs(tip_slope) < 0.15:
+    if math.isnan(tip_slope) or abs(tip_slope) > 15 or abs(tip_slope) < 0.05:
 
         angle = 0
         if arrow_orientation == DOWN:
@@ -299,11 +301,32 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
     # if slope is 'soft', then calculate appropriate indicator orientation
     else:
 
-        tip_angle = 90 + math.degrees(math.atan(tip_slope))
+        # TODO:: debug problem w/ tip slope 
+        angle = 90
+        if arrow_orientation == UP:
+            if tip_slope > 0:
+                angle = 270
+        elif arrow_orientation == DOWN:
+            if tip_slope < 0:
+                angle = 270
+        elif arrow_orientation == RIGHT:
+            angle = 270
 
-        image_center = ((tmp_img.shape[1] - 1) / 2, (tmp_img.shape[0] - 1) / 2)
+        tip_angle = angle + math.degrees(math.atan(tip_slope))
+
+        # image_center = ((tmp_img.shape[1] - 1) / 2, (tmp_img.shape[0] - 1) / 2)
+        image_center = (250, 250)
+
+        # tmp_img = cv2.circle(tmp_img, (int(image_center[0]),int(image_center[1])), 3, (0,255,0), -1) 
+        # cv2.imshow('image',tmp_img)
+        # cv2.waitKey(0)
+
         rot_mat = cv2.getRotationMatrix2D(image_center, tip_angle, 1.0)
-        tmp_img = cv2.warpAffine(tmp_img, rot_mat, tmp_img.shape[1::-1], flags=cv2.INTER_NEAREST)
+        tmp_img = cv2.warpAffine(tmp_img, rot_mat, tmp_img.shape[1::-1], flags=cv2.INTER_LINEAR)
+
+        
+        # cv2.imshow('image',tmp_img)
+        # cv2.waitKey(0)
 
         tmp_img = tmp_img[200:300,200:300,:]
 
@@ -312,23 +335,30 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
         img[blk_idx] = [0,0,0]
 
+
         
 
     # get bbox dims for corresponding indicator
     if self.indicator == INHIBIT or self.indicator == INDIRECT_INHIBIT:
-        min_x = min([pt1[0],pt3[0]]) - self.thickness + 2
-        min_y = min([pt1[1],pt3[1]]) - self.thickness + 2
 
-        max_x = max([pt1[0],pt3[0]]) + self.thickness + 2
-        max_y = max([pt1[1],pt3[1]]) + self.thickness + 2
+        blk_idx = np.array(blk_idx)
+        mins = np.min(blk_idx,axis=1)
+        maxes = np.max(blk_idx,axis=1)
+
+        min_x = mins[1]
+        min_y = mins[0]
+
+        max_x = maxes[1]
+        max_y = maxes[0]
     else:
-        min_x = min([pt1[0],pt2[0],pt3[0]])
-        min_y = min([pt1[1],pt2[1],pt3[1]])
-
-        max_x = max([pt1[0],pt2[0],pt3[0]])
-        max_y = max([pt1[1],pt2[1],pt3[1]])
+        min_x, max_x, min_y, max_y = my_arrow.get_min_max()
 
     indicator_bbox = [[min_x,min_y],[max_x,max_y]]
+
+
+
+
+    
 
     return img, indicator_bbox
 
@@ -460,7 +490,7 @@ def get_start_end_points(cluster1_center,cluster2_center,cluster1_bbox,cluster2_
                 start_point = [math.floor(current_point[0]),math.floor(current_point[1])]
     
     if not start_point:
-        start_point = [math.floor(canidate_points[10][0]),math.floor(canidate_points[10][1])]
+        start_point = [math.floor(canidate_points[15][0]),math.floor(canidate_points[15][1])]
 
     # get end point for spline
     count = 0
@@ -473,7 +503,8 @@ def get_start_end_points(cluster1_center,cluster2_center,cluster1_bbox,cluster2_
                 end_point = [math.floor(current_point[0]),math.floor(current_point[1])]
 
     if not end_point:
-        end_point = [math.floor(canidate_points[-10][0]),math.floor(canidate_points[-10][1])]
+        end_point = [math.floor(canidate_points[-15][0]),math.floor(canidate_points[-15][1])]
+
 
     return start_point, end_point
     
@@ -509,11 +540,14 @@ def get_spline_anchors(self,cluster1_center,cluster2_center,cluster1_bbox,cluste
         start_point, end_point = get_start_end_points(cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox)
         self.spline_type = ARCH
         spline_points = get_arch_anchors(self,start_point,end_point)
+
     else:
         # LINE
         start_point, end_point = get_start_end_points(cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox)
         self.spline_type = LINE
         spline_points = np.linspace(start_point, end_point, num=4,dtype=np.int)
+
+    
 
     x_span = spline_points[:,0]
     y_span = spline_points[:,1]
@@ -689,7 +723,7 @@ def draw_relationship(self,img,cluster1_center,cluster2_center,entity_configurat
 
     cluster1_bbox = [[int(cluster1_center[0]-(w1/2)),int(cluster1_center[1]-(h1/2))],[int(cluster1_center[0]+(w1/2)),int(cluster1_center[1]+(h1/2))]]
 
-    
+
     w2 = cluster2_shape[0]
     h2 = cluster2_shape[1]
     # iteratively place cluster entities
@@ -698,7 +732,6 @@ def draw_relationship(self,img,cluster1_center,cluster2_center,entity_configurat
         placed_entities2[idx].bbox = tmp_bbox
 
     cluster2_bbox = [[int(cluster2_center[0]-(w2/2)),int(cluster2_center[1]-(h2/2))],[int(cluster2_center[0]+(w2/2)),int(cluster2_center[1]+(h2/2))]]
-
 
     # force anchors to be outside of cluster bboxes
     x_span,y_span = get_spline_anchors(self,cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox,entity_configuration)
@@ -775,7 +808,7 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
             
     """
 
-    threshold = 5
+    threshold = 3
 
     template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
@@ -858,7 +891,7 @@ def get_entity_placement(slice_shape,x_target,y_target,cluster1_shape,cluster2_s
     for entity in placed_entities1:
         entity.center = [entity.center[0] + cluster1_center[0] - int(w1/2),entity.center[1] + cluster1_center[1] - int(h1/2)]
     for entity in placed_entities2:
-        entity.center = [entity.center[0] + cluster2_center[0] - int(w1/2),entity.center[1] + cluster2_center[1] - int(h1/2)]
+        entity.center = [entity.center[0] + cluster2_center[0] - int(w2/2),entity.center[1] + cluster2_center[1] - int(h2/2)]
 
     return cluster1_center, cluster2_center, entity_configuration
 
@@ -929,7 +962,7 @@ def set_relationship_config(self):
     
     self.arrow_placement = random.choice([START, END])
     self.arrow_color = (0, 0, 0)
-    # self.indicator = random.choice([INHIBIT, ACTIVATE])
+    # self.indicator = random.choice([ACTIVATE, INDIRECT_ACTIVATE])
     self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.arch_ratio = 0.1
     self.spline_type = LINE
@@ -968,7 +1001,11 @@ class copy_thread(threading.Thread):
 
         # loop through templates
         # read template and get query coords
-        template_im = cv2.imread(os.path.join(self.directory, self.filename))
+        temp_x = random.randint(580, 810)
+        temp_y = random.randint(400, 1000)
+        template_im = np.ones((temp_y,temp_x,3)) * 255
+        template_im = template_im.astype(np.uint8)
+
 
         # put relations on template and generate annotation
         element_indx = 0
@@ -985,7 +1022,9 @@ class copy_thread(threading.Thread):
             "shape_type": "polygon",
             "flags": {}
         }
-        for relation_idx in range(50):
+
+        num_to_place = random.randint(5, 20)
+        for relation_idx in range(num_to_place):
 
             self = set_text_config(self)
 
@@ -1042,6 +1081,9 @@ class copy_thread(threading.Thread):
                     
                     
                     template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,cluster1_center,cluster2_center,entity_configuration,placed_entities1,placed_entities2,cluster1_shape,cluster2_shape)
+
+                    
+
 
                     shapes_1 = []
                     for entity in placed_entities1:
@@ -1162,9 +1204,9 @@ class template_thread(threading.Thread):
 
         filename = self.template_list[self.threadID]
         
-        # how many images per template
+        # how many images per template9
         stop_child_flag = False
-        num_copies = 200
+        num_copies = 600
         for copy_idx in range(0,num_copies):
 
             # children in here
@@ -1176,32 +1218,32 @@ class template_thread(threading.Thread):
                 break
 
             child_thread0 = copy_thread(child_thread_idx,"child0",self.directory,filename)
-            # child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
-            # child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
-            # child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
+            child_thread1 = copy_thread(child_thread_idx+1,"child1",self.directory,filename)
+            child_thread2 = copy_thread(child_thread_idx+2,"child2",self.directory,filename)
+            child_thread3 = copy_thread(child_thread_idx+3,"child3",self.directory,filename)
 
             child_thread0.start()
-            # if (copy_idx*4) + 1 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread1.start()
-            # if (copy_idx*4) + 2 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread2.start()
-            # if (copy_idx*4) + 3 > num_copies:
-            #     stop_child_flag = True
-            #     continue
-            # else:
-            #     child_thread3.start()
+            if (copy_idx*4) + 1 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread1.start()
+            if (copy_idx*4) + 2 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread2.start()
+            if (copy_idx*4) + 3 > num_copies:
+                stop_child_flag = True
+                continue
+            else:
+                child_thread3.start()
 
             child_thread0.join()
-            # child_thread1.join()
-            # child_thread2.join()
-            # child_thread3.join()
-            break
+            child_thread1.join()
+            child_thread2.join()
+            child_thread3.join()
+            # break
 
 
 def populate_figures():
@@ -1227,32 +1269,32 @@ def populate_figures():
             break
 
         thread0 = template_thread(template_idx,"thread-0",template_list,directory)
-        # thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
-        # thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
-        # thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
+        thread1 = template_thread(template_idx+1,"thread-1",template_list,directory)
+        thread2 = template_thread(template_idx+2,"thread-2",template_list,directory)
+        thread3 = template_thread(template_idx+3,"thread-3",template_list,directory)
 
         thread0.start()
-        # if template_idx + 1 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread1.start()
-        # if template_idx + 2 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread2.start()
-        # if template_idx + 3 > len(template_list):
-        #     stop_flag = True
-        #     continue
-        # else:
-        #     thread3.start()
+        if template_idx + 1 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread1.start()
+        if template_idx + 2 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread2.start()
+        if template_idx + 3 > len(template_list):
+            stop_flag = True
+            continue
+        else:
+            thread3.start()
 
         thread0.join()
-        # thread1.join()
-        # thread2.join()
-        # thread3.join()
-        break
+        thread1.join()
+        thread2.join()
+        thread3.join()
+        # break
 
 
 
