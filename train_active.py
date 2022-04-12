@@ -18,9 +18,12 @@ Compared to "train_net.py", this script supports fewer features, and also
 includes fewer abstraction.
 """
 
+from cProfile import label
 import logging
 import os,csv,random
 from collections import OrderedDict
+from math import inf
+import numpy as np
 import torch
 from torch.nn.parallel import DistributedDataParallel
 from contextlib import contextmanager
@@ -57,6 +60,7 @@ from detectron2.structures import Instances, RotatedBoxes,BoxMode, Boxes
 from relation_data_tool_old import register_pathway_dataset, PathwayDatasetMapper, register_Kfold_pathway_dataset
 from pathway_evaluation import PathwayEvaluator
 from generate_batch import get_batch,my_args,get_annotation_dicts
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger("pathway_parser")
 
@@ -227,6 +231,33 @@ def build_detection_validation_loader(cfg, dataset_name, mapper=None):
     return data_loader
 
 
+def format_data(images,labels):
+
+    # category_list = ['activate','gene','inhibit']
+    category_list = ['activate','inhibit','indirect_activate','indirect_inhibit']
+    # convert annotationformat
+    reformatted_annotation = get_annotation_dicts(images, labels, category_list, anno_type = 'regular')
+
+    train_instances = []
+    for idx, record in enumerate(reformatted_annotation):
+        bboxes = []
+        class_ids = []
+        objs = record["annotations"]
+        for obj in objs:
+            bboxes.append(obj["bbox"])
+            class_ids.append(obj['category_id'])
+        bboxes = torch.tensor(bboxes)
+        bboxes = Boxes(bboxes)
+        class_ids = torch.tensor(class_ids)
+        image_shape = images[idx].shape
+        train_instances.append(Instances((image_shape[0],image_shape[1]),gt_boxes=bboxes,gt_classes=class_ids))
+
+    data = []
+    for idx in range(len(images)):
+        data.append({"image":torch.from_numpy(images[idx]).view(3,images[idx].shape[0],-1),'instances':train_instances[idx]})
+
+    return data
+
 def do_train(cfg, model, resume=False):
 
 
@@ -267,10 +298,11 @@ def do_train(cfg, model, resume=False):
 
 
     # epoch_num has # of iterations per epoch
-    epoch_num = 100
+    epoch_num = 10
 
     # max_iter is # of iterations for set # of epochs
-    max_iter = epoch_num * 50
+    max_iter = epoch_num * 3
+
 
     
     cfg.defrost()
@@ -295,32 +327,10 @@ def do_train(cfg, model, resume=False):
     print(epoch_num)
     print(max_iter)
 
-    train_args = my_args({0:0.8,2:0.2},2)
-    images,labels = get_batch(train_args)
-    category_list = ['activate','gene','inhibit']
-    # convert annotationformat
-    reformatted_annotation = get_annotation_dicts(images, labels, category_list, anno_type = 'regular')
-
-    train_instances = []
-    for idx, record in enumerate(reformatted_annotation):
-        bboxes = []
-        class_ids = []
-        objs = record["annotations"]
-        for obj in objs:
-            bboxes.append(obj["bbox"])
-            class_ids.append(obj['category_id'])
-        bboxes = torch.tensor(bboxes)
-        bboxes = Boxes(bboxes)
-        class_ids = torch.tensor(class_ids)
-        image_shape = images[idx].shape
-        train_instances.append(Instances((image_shape[0],image_shape[1]),gt_boxes=bboxes,gt_classes=class_ids))
-
-    data = []
-    for idx in range(len(images)):
-        data.append({"image":torch.from_numpy(images[idx]).view(3,images[idx].shape[0],-1),'instances':train_instances[idx]})
-
+    
+    
+    all_normed_losses = []
     # if generate new batch every iteration, then don't need to save dataset or need loaders
-
     logger.info("Starting training from iteration {}".format(start_iter))
     loss_weights = {'loss_cls': 1, 'loss_box_reg': 1}
     with EventStorage(start_iter) as storage:
@@ -331,12 +341,26 @@ def do_train(cfg, model, resume=False):
         better_val = False
         for iteration in range(0, max_iter):
 
-            # data = dataset[iteration]
+            seed_probabilities = {0:0.94,1:0.02,2:0.02,3:0.02}
+            train_args = my_args(seed_probabilities,2)
+            images,labels = get_batch(train_args)
+            data = format_data(images,labels)
 
             iteration = iteration + 1
             storage.step()
 
-            loss_dict = model(data)
+            loss_dict, all_losses = model(data)
+
+            with torch.no_grad():
+                all_cls_losses = all_losses['all_loss_cls']
+                class_loss_sums = torch.sum(all_cls_losses,dim=0)
+
+                all_cls_labels = all_losses['all_cls_labels']
+                class_label_sums = torch.sum(all_cls_labels,dim=0)
+
+                normalized_class_losses = class_loss_sums / class_label_sums
+
+                all_normed_losses.append(normalized_class_losses.cpu().detach().numpy())
 
             losses = sum(loss for loss in loss_dict.values())
             assert torch.isfinite(losses).all(), loss_dict
@@ -356,45 +380,32 @@ def do_train(cfg, model, resume=False):
             #if comm.is_main_process():
             storage.put_scalar("lr", optimizer.param_groups[0]["lr"], smoothing_hint=False)
             scheduler.step()
-
-            # if (
-            #     # cfg.TEST.EVAL_PERIOD > 0
-            #     # and
-            #         iteration % epoch_num == 0
-            #         #iteration % cfg.TEST.EVAL_PERIOD == 0
-            #     and iteration != max_iter
-            # ):
-            #     do_test(cfg, model)
-            #     # Compared to "train_net.py", the test results are not dumped to EventStorage
-            #     comm.synchronize()
-
-            '''
-            loss_per_epoch += losses_reduced
-            if iteration % epoch_num == 0 or iteration == max_iter:
-                #one complete epoch
-                epoch_loss = loss_per_epoch / epoch_num
-                #do validation
-                outputs = inference_on_dataset(model, val_loader, val_evaluator)
-
-                checkpointer.save("model_{:07d}".format(iteration), **{"iteration": iteration})
-                # calculate epoch_loss and push to history cache
-                #if comm.is_main_process():
-                # storage.put_scalar("epoch_loss", epoch_loss, smoothing_hint=False)
-                # # storage.put_scalar("epoch_cls_loss", epoch_cls_loss, smoothing_hint=False)
-                # # storage.put_scalar("epoch_box_reg_loss", epoch_box_reg_loss, smoothing_hint=False)
-                # storage.put_scalar("activate_ap", activate_ap, smoothing_hint=False)
-                # storage.put_scalar("gene_ap", gene_ap, smoothing_hint=False)
-                # storage.put_scalar("inhibit_ap", inhibit_ap, smoothing_hint=False)
-
-                for writer in writers:
-                    writer.write()
-
-                #reset loss_per_epoch
-                loss_per_epoch = 0.0
-                '''
              
             del loss_dict,losses,losses_reduced,loss_dict_reduced
             torch.cuda.empty_cache()
+
+    for idx1, class_losses in enumerate(all_normed_losses):
+        for idx2, loss in enumerate(class_losses):
+            if loss == np.inf or loss == inf:
+                if idx1 == 0:
+                    all_normed_losses[idx1][idx2] = np.mean(class_losses)
+                else:
+                    all_normed_losses[idx1][idx2] = all_normed_losses[idx1-1][idx2]
+
+
+    plot_labels = ['ACTIVATE', 'INHIBIT', 'INDIRECT_ACTIVATE', 'INDIRECT_INHIBIT']
+    all_normed_losses = np.array(all_normed_losses)
+    for idx in range(all_normed_losses.shape[1]):
+        # define data values
+        x = np.arange(all_normed_losses.shape[0])  # X-axis points
+        y = all_normed_losses[:,idx]
+        
+        plt.plot(x, y, label=plot_labels[idx])  # Plot the chart
+
+    plt.legend()
+    plt.show()  # display
+
+    
 
 def evaluate_all_checkpoints(args, checkpoint_folder, output_csv_file):
     cfg = setup(args)
