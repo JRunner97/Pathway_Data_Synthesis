@@ -1,3 +1,4 @@
+from re import template
 import numpy as np
 from scipy.interpolate import make_interp_spline
 import os
@@ -11,12 +12,8 @@ import string
 import random
 from scipy import stats
 import skimage.draw as draw
-import matplotlib.pyplot as plt
 from PIL import ImageFont, ImageDraw, Image
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
-from synthetic_shapes import Synthetic_Shape, Synthetic_Arrow
-import time
+from synthetic_shapesv2 import Synthetic_Shape, Synthetic_Arrow
 
 
 START = 0
@@ -38,6 +35,8 @@ CORNER = 2
 
 DOWN_SLASH = 2
 UP_SLASH = 3
+UP_DOWN = 4
+LEFT_RIGHT = 5
 
 
 def randomword(length):
@@ -205,7 +204,10 @@ def draw_spline(self,img,x_span,y_span):
 
     # draw spline
     for x,y in base_points:
-        img = cv2.circle(img, (x,y), self.thickness, self.arrow_color, -1)  
+        if self.thickness > 0:
+            img = cv2.circle(img, (x,y), self.thickness, self.arrow_color, -1)
+        else:
+            img[y,x,:] = np.array(self.arrow_color).astype(np.uint8)
 
     # get reference point
     tmp_len = x_span.size
@@ -266,12 +268,12 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
         pt3 = [250+self.base_len, 250]
 
         triangle_cnt = np.array( [tuple(pt1), tuple(pt3)] )
-        cv2.drawContours(tmp_img, [triangle_cnt], 0, self.arrow_color, self.thickness+2)
+        cv2.drawContours(tmp_img, [triangle_cnt], 0, self.arrow_color, self.thickness+1)
 
     else:
 
-        my_arrow = Synthetic_Arrow()
-        tmp_img = my_arrow.draw_shape(tmp_img,[250,243])
+        my_arrow = Synthetic_Arrow(self.thickness)
+        tmp_img = my_arrow.draw_shape(tmp_img,[250,250])
         my_arrow.center = tri_source
 
 
@@ -295,7 +297,7 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
         blk_idx = np.array(np.where((tmp_img!=[255,255,255]).all(axis=2))) - 50
         blk_idx = (blk_idx[0]+tri_source[1],blk_idx[1]+tri_source[0])
 
-        img[blk_idx] = [0,0,0]
+        img[blk_idx] = list(self.arrow_color)
     
 
     # if slope is 'soft', then calculate appropriate indicator orientation
@@ -314,27 +316,18 @@ def draw_indicator(self,img,x_span,y_span,tip_slope,arrow_orientation):
 
         tip_angle = angle + math.degrees(math.atan(tip_slope))
 
-        # image_center = ((tmp_img.shape[1] - 1) / 2, (tmp_img.shape[0] - 1) / 2)
         image_center = (250, 250)
-
-        # tmp_img = cv2.circle(tmp_img, (int(image_center[0]),int(image_center[1])), 3, (0,255,0), -1) 
-        # cv2.imshow('image',tmp_img)
-        # cv2.waitKey(0)
 
         rot_mat = cv2.getRotationMatrix2D(image_center, tip_angle, 1.0)
         tmp_img = cv2.warpAffine(tmp_img, rot_mat, tmp_img.shape[1::-1], flags=cv2.INTER_LINEAR)
 
-        
-        # cv2.imshow('image',tmp_img)
-        # cv2.waitKey(0)
 
         tmp_img = tmp_img[200:300,200:300,:]
 
         blk_idx = np.array(np.where((tmp_img!=[255,255,255]).all(axis=2))) - 50
         blk_idx = (blk_idx[0]+tri_source[1],blk_idx[1]+tri_source[0])
 
-        img[blk_idx] = [0,0,0]
-
+        img[blk_idx] = list(self.arrow_color)
 
         
 
@@ -531,7 +524,7 @@ def get_spline_anchors(self,cluster1_center,cluster2_center,cluster1_bbox,cluste
     # TODO:: make classes for structures
     # TODO:: do this better, maybe set multimodal distribution to pull from
     rand_int = np.random.randint(3)
-    if rand_int == 0 and abs(cluster1_center[0]-cluster2_center[0]) > 70 and abs(cluster1_center[1]-cluster2_center[1]) > 70:
+    if rand_int == 0 and abs(cluster1_center[0]-cluster2_center[0]) > 70 and abs(cluster1_center[1]-cluster2_center[1]) > 70 and entity_configuration != UP_DOWN and entity_configuration != LEFT_RIGHT:
         # CORNER
         self.spline_type = CORNER
         spline_points = get_corner_anchors(entity_configuration,cluster1_center,cluster2_center,cluster1_bbox,cluster2_bbox)
@@ -664,8 +657,10 @@ def get_cluster_arrangement(current_entitiy,placed_entities):
     mask_dim = 1000
     cluster_mask = np.zeros((mask_dim,mask_dim,1), np.float32)
     for entity in placed_entities:
-        cluster_mask = entity.draw_shape(cluster_mask.astype(np.uint8),[entity.center[0]+(mask_dim/2),entity.center[1]+(mask_dim/2)],(255,255,255),(255,255,255))
+        cluster_mask = entity.draw_shape(cluster_mask.astype(np.uint8),[entity.center[0]+(mask_dim/2),entity.center[1]+(mask_dim/2)],(255,255,255),(255,255,255),fill=True)
 
+    cv2.imwrite('mask.jpg',cluster_mask)
+    # cv2.waitKey(0)
 
     # TODO:: problem of unbalance direction sampling from sparse set of points from get_points()
     # select point from first entity in cluster and keep going in that dir until out of cluster
@@ -676,7 +671,7 @@ def get_cluster_arrangement(current_entitiy,placed_entities):
         # get new entity mask
         new_entity_mask = np.zeros((mask_dim,mask_dim,1), np.float32)
         test_center = [int(shape1_x[tmp_idx]*factor)+entity1_center[0],int(shape1_y[tmp_idx]*factor)+entity1_center[1]]
-        new_entity_mask = current_entitiy.draw_shape(new_entity_mask.astype(np.uint8),[test_center[0]+(mask_dim/2),test_center[1]+(mask_dim/2)],(255,255,255),(255,255,255))
+        new_entity_mask = current_entitiy.draw_shape(new_entity_mask.astype(np.uint8),[test_center[0]+(mask_dim/2),test_center[1]+(mask_dim/2)],(255,255,255),(255,255,255),fill=True)
         
         # check iou
         mul_mask = np.multiply(cluster_mask.astype(np.int32),new_entity_mask.astype(np.int32))
@@ -686,6 +681,13 @@ def get_cluster_arrangement(current_entitiy,placed_entities):
         # if no overlap break out
         if np.all(mul_mask == 0):
             break
+
+        cv2.imwrite(str(factor)+'mask.jpg',mul_mask.astype(np.uint8))
+        # cv2.waitKey(0)
+
+        # cv2.imshow('mask'+str(factor)+'.jpg',mul_mask.astype(np.float16))
+        # cv2.waitKey(0)
+        
 
         factor += 0.1
 
@@ -756,6 +758,9 @@ def draw_relationship(self,img,cluster1_center,cluster2_center,entity_configurat
     # if want relationship_bbox instead of indicator just return this in its place
     relationship_bbox = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
+    # img = cv2.rectangle(img, (indicator_bbox[0][0],indicator_bbox[0][1]), (indicator_bbox[2][0],indicator_bbox[2][1]), (255,0,0), 2)
+    # img = cv2.rectangle(img, (relationship_bbox[0][0],relationship_bbox[0][1]), (relationship_bbox[2][0],relationship_bbox[2][1]), (0,255,0), 2)
+
     return img,relationship_bbox,placed_entities1,placed_entities2
  
 def radial_profile(data, center):
@@ -790,7 +795,7 @@ def radial_profile(data, center):
 
 
 # x,y now define a center
-def check_slice(template_im,slice_shape,x,y,padding=0):
+def check_slice(template_im,slice_shape,x,y,padding=0,threshold=3):
 
     """
 
@@ -807,8 +812,6 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
             (bool): indicates if region is good or not
             
     """
-
-    threshold = 3
 
     template_slice = template_im[y-padding:y+slice_shape[1]+padding,x-padding:x+slice_shape[0]+padding,:]
 
@@ -835,6 +838,10 @@ def check_slice(template_im,slice_shape,x,y,padding=0):
     bin_means = stats.binned_statistic(idx, radial_prof, 'mean', bins=4)[0]
 
     if bin_means[-1] < threshold and bin_means[-2] < threshold:
+
+        # cv2.imshow("grey",grey_slice)
+        # cv2.waitKey(0)
+
         return True
     else:
         return False
@@ -865,7 +872,32 @@ def get_entity_placement(slice_shape,x_target,y_target,cluster1_shape,cluster2_s
 
     # 2 configurations/positioning: square1, square2
     # DOWN_SLASH
-    if np.random.randint(2):
+    slice_dim_ratio = slice_shape[0] / slice_shape[1]
+
+    
+    
+    # top mid & bottom mid
+    pos_rand = np.random.randint(2)
+    if slice_dim_ratio < 0.9 and pos_rand:
+        cluster1_center_x = x_target + (slice_shape[0] / 2)
+        cluster1_center_y = y_target + math.floor(h1/2)
+
+        cluster2_center_x = x_target + (slice_shape[0] / 2)
+        cluster2_center_y = y_target + slice_shape[1] - math.floor(h2/2)
+
+        entity_configuration = UP_DOWN
+
+    elif slice_dim_ratio > 1.6 and pos_rand:
+
+        cluster1_center_x = x_target + math.floor(w1/2)
+        cluster1_center_y = y_target + (slice_shape[1] / 2)
+
+        cluster2_center_x = x_target + slice_shape[0] - math.floor(w2/2)
+        cluster2_center_y = y_target + (slice_shape[1] / 2)
+
+        entity_configuration = LEFT_RIGHT
+        
+    elif pos_rand:
         cluster1_center_x = x_target + math.floor(w1/2)
         cluster1_center_y = y_target + math.floor(h1/2)
 
@@ -884,6 +916,7 @@ def get_entity_placement(slice_shape,x_target,y_target,cluster1_shape,cluster2_s
         entity_configuration = UP_SLASH
 
 
+
     cluster1_center = [cluster1_center_x,cluster1_center_y]
     cluster2_center = [cluster2_center_x,cluster2_center_y]
 
@@ -894,6 +927,30 @@ def get_entity_placement(slice_shape,x_target,y_target,cluster1_shape,cluster2_s
         entity.center = [entity.center[0] + cluster2_center[0] - int(w2/2),entity.center[1] + cluster2_center[1] - int(h2/2)]
 
     return cluster1_center, cluster2_center, entity_configuration
+
+def get_snr1(copy_template,template_im):
+    # average pixel difference
+
+    # SNR 1
+    im_dif = np.abs(copy_template - template_im)
+    dif_sum = np.sum(im_dif.flatten()) 
+    snr = dif_sum / (template_im.shape[0]*template_im.shape[1]*3)
+
+    return snr
+
+    
+
+def get_snr2(copy_template,template_im):
+
+    # SNR 2
+    im_dif = copy_template - template_im
+    dif_sq = np.square(im_dif)
+    dif_sum = np.sum(dif_sq.flatten().astype(np.float64)) 
+
+    numerator = np.sum(np.square(copy_template.flatten().astype(np.float64))) 
+
+    snr = numerator / dif_sum
+    return snr
 
 def get_entities(self,num_entities):
 
@@ -956,12 +1013,20 @@ def get_entities(self,num_entities):
 def set_relationship_config(self):
     
     # set tip_len based on base_len 
-    self.thickness = random.randint(1, 3)
-    self.base_len = random.randint(self.thickness+8, 15)
+    # thick_rand = random.randint(1, 10)
+    # if thick_rand < 5:
+    #     self.thickness = 0
+    # elif thick_rand < 8:
+    #     self.thickness = 1
+    # else:
+    #     self.thickness = 2
+    self.thickness = 0
+    # self.thickness = random.randint(1, 3)
+    self.base_len = random.randint(self.thickness+8, 12)
     self.tip_len = random.randint(self.base_len, 22)
     
     self.arrow_placement = random.choice([START, END])
-    self.arrow_color = (0, 0, 0)
+    self.arrow_color = tuple([int(np.random.randint(0,200)),int(np.random.randint(0,200)),int(np.random.randint(0,200))])
     # self.indicator = random.choice([ACTIVATE, INDIRECT_ACTIVATE])
     self.indicator = random.choice([INHIBIT, ACTIVATE, INDIRECT_INHIBIT, INDIRECT_ACTIVATE])
     self.arch_ratio = 0.1
@@ -976,6 +1041,125 @@ def set_text_config(self):
     self.font_style = random.choice(font_style_list)
 
     return self
+
+def shape_noise(img):
+
+
+    # random shape noise
+    shape_num = np.random.randint(0,20)
+    tmp_shape = img.shape
+    for line_idx in range(shape_num):
+
+        # instantiate shape
+        syn_shape = Synthetic_Shape([0,0],None,"noise_shapes")
+        syn_shape.width = np.random.randint(20,40)
+        syn_shape.height = np.random.randint(20,40)
+        syn_shape.text_margin = 0
+
+        slice_shape = [syn_shape.width,syn_shape.height]
+
+        # repeately check if queried coords are a valid location
+        for idx in range(50):
+
+            # subtracted max bounds of shape to ensure valid coords
+            x_target = np.random.randint(0+slice_shape[0],img.shape[1]-slice_shape[0])
+            y_target = np.random.randint(0+slice_shape[1],img.shape[0]-slice_shape[1])
+
+            
+            # check if selected template area is good
+            if check_slice(img,slice_shape,x_target,y_target,0,0.002):
+
+                fill = np.random.randint(2)
+                if not fill:
+                    outline = True
+                else:
+                    outline = np.random.randint(2)
+
+                img = syn_shape.draw_shape(img,[x_target+int(syn_shape.width/2),y_target+int(syn_shape.height/2)],fill=fill,outline=outline)
+
+                break
+    
+    return img
+
+
+def arch_noise(self,img):
+    # random arch noise
+    self.indicator = ACTIVATE
+    self.spline_type = ARCH
+
+    line_num = np.random.randint(0,10)
+    shape = img.shape
+    for line_idx in range(line_num):
+        x1 = np.random.randint(0,shape[1]-1)
+        y1 = np.random.randint(0,shape[0]-1)
+        x2 = np.random.randint(0,shape[1]-1)
+        y2 = np.random.randint(0,shape[0]-1)
+
+        self.arch_ratio = np.random.uniform(0.0,0.3)
+        self.thickness = 0
+        self.arrow_color = tuple([int(np.random.randint(0,200)),int(np.random.randint(0,200)),int(np.random.randint(0,200))])
+
+        spline_points = get_arch_anchors(self,[x1,y1],[x2,y2])
+
+        x_span = spline_points[:,0]
+        y_span = spline_points[:,1]
+
+        img, _, _, _ = draw_spline(self,img,x_span,y_span)
+
+    return img
+
+def line_noise(img):
+    #ranodm lines noise
+
+    if np.random.randint(2):
+
+        line_num = np.random.randint(0,20)
+        # line_num = 10
+        shape = img.shape
+        for line_idx in range(line_num):
+            x1 = np.random.randint(0,shape[1])
+            y1 = np.random.randint(0,shape[0])
+            x2 = np.random.randint(0,shape[1])
+            y2 = np.random.randint(0,shape[0])
+
+            tmp_color = tuple([int(np.random.randint(0,200)),int(np.random.randint(0,200)),int(np.random.randint(0,200))])
+        
+            img = cv2.polylines(img, np.int32([np.array([[x1,y1],[x2,y2]])]), False, tmp_color, 1)
+
+    return img
+
+def gaus_noise(img):
+
+    if np.random.randint(2):
+        # gaus noise
+        mean = 0
+        var = np.random.randint(0,300)
+        sigma = var ** 0.5
+        gaussian = np.random.normal(mean, sigma, (img.shape[0],img.shape[1],3)) 
+        img = img + gaussian
+
+    return img
+
+def s_p_noise(img):
+    # s&p noise
+    copy_template = copy.deepcopy(img)
+    s_vs_p = 0.5
+    amount = 0.008
+    # Salt mode
+    num_salt = np.ceil(amount * img.size * s_vs_p)
+    salt_coords = [np.random.randint(0, i -1, int(num_salt))
+            for i in img.shape[:2] ]
+    copy_template[tuple(salt_coords)] = 255
+    # Pepper mode
+    num_pepper = np.ceil(amount* img.size * (1. - s_vs_p))
+    p_coords = [np.random.randint(0, i -1, int(num_pepper))
+            for i in img.shape[:2]]
+    copy_template[tuple(p_coords)] = 0
+    img[tuple(salt_coords)] = 255
+    img[tuple(p_coords)] = 0
+
+    return img
+
 
 # TODO:: don't have text_margin effect bbox annotation for text
 class copy_thread(threading.Thread):
@@ -1005,6 +1189,7 @@ class copy_thread(threading.Thread):
         temp_y = random.randint(400, 1000)
         template_im = np.ones((temp_y,temp_x,3)) * 255
         template_im = template_im.astype(np.uint8)
+        # template_im = cv2.imread(os.path.join(self.directory, self.filename))
 
 
         # put relations on template and generate annotation
@@ -1028,14 +1213,14 @@ class copy_thread(threading.Thread):
 
             self = set_text_config(self)
 
-            # num_entities = np.random.randint(1,5)
+            # num_entities = np.random.randint(1,4)
             num_entities = 1
             # text shape is actually cluster shape dimensions
             placed_entities1, cluster1_shape = get_entities(self,num_entities)
             w1 = cluster1_shape[0]
             h1 = cluster1_shape[1]
 
-            # num_entities = np.random.randint(1,5)
+            # num_entities = np.random.randint(1,4)
             num_entities = 1
             placed_entities2, cluster2_shape = get_entities(self,num_entities)
             w2 = cluster2_shape[0]
@@ -1044,21 +1229,23 @@ class copy_thread(threading.Thread):
 
             # get shape of target region
             # try to match g.t. relationship shape dist, but can't exactly since our generation needs z distance bewtween entities
+            # scale = random.choice([40.0,80.0])
+            scale = random.choice([40.0])
             dim_rand = np.random.randint(6)
             if dim_rand < 2:
-                x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2
-                y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 50
+                x_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + w1 + w2
+                y_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + h1 + h2 + 50
             elif 2 <= dim_rand < 4:
-                y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2
-                x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
+                y_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + h1 + h2
+                x_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + w1 + w2 + 50
             else:
                 # more tall or long
                 if np.random.randint(2):
-                    x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([w1,w2])
-                    y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + h1 + h2 + 50
+                    x_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + max([w1,w2])
+                    y_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + h1 + h2 + 50
                 else:
-                    y_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + max([h1,h2])
-                    x_dim = int(np.abs(np.random.normal(loc=0.0, scale=80.0))) + w1 + w2 + 50
+                    y_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + max([h1,h2])
+                    x_dim = int(np.abs(np.random.normal(loc=0.0, scale=scale))) + w1 + w2 + 50
 
             slice_shape = [x_dim,y_dim]
 
@@ -1081,8 +1268,6 @@ class copy_thread(threading.Thread):
                     
                     
                     template_im,relationship_bbox,placed_entities1,placed_entities2 = draw_relationship(self,template_im,cluster1_center,cluster2_center,entity_configuration,placed_entities1,placed_entities2,cluster1_shape,cluster2_shape)
-
-                    
 
 
                     shapes_1 = []
@@ -1128,6 +1313,19 @@ class copy_thread(threading.Thread):
                             shapes_1_str = shapes_1_str + str(shape['ID']) + ','
                         shapes_1_str = shapes_1_str[:-1] + ']'
 
+                        cluster_shape = copy.deepcopy(base_shape)
+                        min_x = cluster1_center[0] - (cluster1_shape[0]/2)
+                        min_y = cluster1_center[1] - (cluster1_shape[1]/2)
+                        max_x = cluster1_center[0] + (cluster1_shape[0]/2)
+                        max_y = cluster1_center[1] + (cluster1_shape[1]/2)
+                        cluster_shape['points'] = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
+                        cluster_shape['ID'] = element_indx
+                        cluster_shape['label'] = str(element_indx) + ":cluster:" + shapes_1_str
+                        element_indx += 1
+                        shapes.append(cluster_shape)
+
+
+
 
                     shapes_2_str = '['
                     if len(shapes_2) == 1:
@@ -1136,6 +1334,17 @@ class copy_thread(threading.Thread):
                         for shape in shapes_2:
                             shapes_2_str = shapes_2_str + str(shape['ID']) + ','
                         shapes_2_str = shapes_2_str[:-1] + ']'
+
+                        cluster_shape = copy.deepcopy(base_shape)
+                        min_x = cluster2_center[0] - (cluster2_shape[0]/2)
+                        min_y = cluster2_center[1] - (cluster2_shape[1]/2)
+                        max_x = cluster2_center[0] + (cluster2_shape[0]/2)
+                        max_y = cluster2_center[1] + (cluster2_shape[1]/2)
+                        cluster_shape['points'] = [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
+                        cluster_shape['ID'] = element_indx
+                        cluster_shape['label'] = str(element_indx) + ":cluster:" + shapes_2_str
+                        element_indx += 1
+                        shapes.append(cluster_shape)
 
 
                     if self.arrow_placement == START:
@@ -1175,6 +1384,36 @@ class copy_thread(threading.Thread):
             # if relation_idx == 2:
             #     break
             # break
+
+
+
+        copy_template = copy.deepcopy(template_im)
+
+        # template_im = shape_noise(template_im)
+
+        copy_template = arch_noise(self,copy_template)
+
+        # copy_template = line_noise(copy_template)
+        
+        # copy_template = gaus_noise(copy_template)
+
+        # template_im = s_p_noise(template_im)
+
+
+
+        snr1 = get_snr1(copy_template,template_im)
+        snr2 = get_snr2(copy_template,template_im)    
+
+        file1 = open("snr1.txt","a")
+        file1.write(str(snr1)+',')
+        file1.close()
+        file2 = open("snr2.txt","a")
+        file2.write(str(snr2)+',')
+        file2.close()
+
+        template_im = copy.deepcopy(copy_template)
+        
+
 
         # save json and new image
         im_dir = "output_test"
