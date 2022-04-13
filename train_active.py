@@ -301,7 +301,7 @@ def do_train(cfg, model, resume=False):
     epoch_num = 10
 
     # max_iter is # of iterations for set # of epochs
-    max_iter = epoch_num * 3
+    max_iter = epoch_num * 100
 
 
     
@@ -341,8 +341,8 @@ def do_train(cfg, model, resume=False):
         better_val = False
         for iteration in range(0, max_iter):
 
-            seed_probabilities = {0:0.94,1:0.02,2:0.02,3:0.02}
-            train_args = my_args(seed_probabilities,2)
+            seed_probabilities = {0:0.25,1:0.25,2:0.25,3:0.25}
+            train_args = my_args(seed_probabilities,1)
             images,labels = get_batch(train_args)
             data = format_data(images,labels)
 
