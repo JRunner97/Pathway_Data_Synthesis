@@ -61,6 +61,7 @@ from relation_data_tool_old import register_pathway_dataset, PathwayDatasetMappe
 from pathway_evaluation import PathwayEvaluator
 from generate_batch import get_batch,my_args,get_annotation_dicts
 import matplotlib.pyplot as plt
+from numpy import inf
 import csv
 
 logger = logging.getLogger("pathway_parser")
@@ -302,7 +303,7 @@ def do_train(cfg, model, resume=False):
     epoch_num = 10
 
     # max_iter is # of iterations for set # of epochs
-    max_iter = epoch_num * 200
+    max_iter = epoch_num * 1000
 
 
     
@@ -328,8 +329,57 @@ def do_train(cfg, model, resume=False):
     print(epoch_num)
     print(max_iter)
 
-    
-    
+    def get_class_losses0(all_losses):
+        '''
+            returns sum of all class errors regardless of target class for given box
+        '''
+        all_cls_labels = all_losses['all_cls_labels']
+        class_label_sums = all_cls_labels.shape[0]
+
+        all_cls_losses = all_losses['all_loss_cls']
+        class_loss_sums = torch.sum(all_cls_losses,dim=0)
+
+        normalized_class_losses = class_loss_sums / class_label_sums
+
+        return normalized_class_losses
+
+    def get_class_losses1(all_losses):
+        '''
+            returns sum of all class errors regardless of target class for given box
+        '''
+        all_cls_labels = all_losses['all_cls_labels']
+        class_label_sums = torch.sum(all_cls_labels,dim=0)
+
+        all_cls_losses = all_losses['all_loss_cls']
+        class_loss_sums = torch.sum(all_cls_losses,dim=0)
+
+        normalized_class_losses = class_loss_sums / class_label_sums
+
+        return normalized_class_losses
+
+    def get_class_losses2(all_losses):
+
+        '''
+            returns sum of classes error for target class for given box for all boxes
+        '''
+
+        all_cls_losses = all_losses['all_loss_cls']
+        all_cls_labels = all_losses['all_cls_labels']
+        class_label_sums = torch.sum(all_cls_labels,dim=0)
+
+        sum_cls_losses_keep_dim = torch.sum(all_cls_losses,dim=1,keepdim=True)
+        sum_cls_losses_keep_dim = sum_cls_losses_keep_dim.repeat(1,4)
+
+        cls_losses = sum_cls_losses_keep_dim * all_cls_labels
+        total_cls_losses = torch.sum(cls_losses,dim=0)
+
+        normalized_class_losses = total_cls_losses / class_label_sums
+
+        return normalized_class_losses
+
+
+    prob_momentum = 0.5
+    all_probs = []
     all_normed_losses = []
     all_class_labels = []
     # if generate new batch every iteration, then don't need to save dataset or need loaders
@@ -341,9 +391,11 @@ def do_train(cfg, model, resume=False):
         best_val_loss = 99999.0
         better_train = False
         better_val = False
+        seed_probabilities = {0:0.25,1:0.25,2:0.25,3:0.25}
+        prob_vs = {0:0,1:0,2:0,3:0}
+        previous_normalized_class_losses = None
         for iteration in range(0, max_iter):
 
-            seed_probabilities = {0:0.25,1:0.25,2:0.25,3:0.25}
             train_args = my_args(seed_probabilities,1)
             images,labels = get_batch(train_args,iteration)
             data = format_data(images,labels)
@@ -354,21 +406,33 @@ def do_train(cfg, model, resume=False):
             loss_dict, all_losses = model(data)
 
             with torch.no_grad():
-                all_cls_losses = all_losses['all_loss_cls']
-                class_loss_sums = torch.sum(all_cls_losses,dim=0)
 
-                all_cls_labels = all_losses['all_cls_labels']
-                class_label_sums = torch.sum(all_cls_labels,dim=0)
+                normalized_class_losses = get_class_losses0(all_losses)
 
-                normalized_class_losses = class_loss_sums / class_label_sums
                 normalized_class_losses = normalized_class_losses.cpu().detach().numpy()
+                result = np.where(normalized_class_losses == inf)
+                for res_idx in result[0]:
+                    if previous_normalized_class_losses is None:
+                        tmp_list = [list_idx for list_idx in range(4) if list_idx not in result[0]]
+                        tmp_idx = random.choice(tmp_list)
+                        normalized_class_losses[res_idx] = normalized_class_losses[tmp_idx]
+                    else:
+                        normalized_class_losses[res_idx] = previous_normalized_class_losses[res_idx]
+
+                previous_normalized_class_losses = normalized_class_losses
 
                 new_probs = normalized_class_losses / np.sum(normalized_class_losses)
-                seed_probabilities[0] = new_probs[0]
-                seed_probabilities[1] = new_probs[1]
-                seed_probabilities[2] = new_probs[2]
-                seed_probabilities[3] = new_probs[3]
 
+                prob_vs[0] = (prob_momentum*prob_vs[0]) + ((1-prob_momentum)*(new_probs[0]-seed_probabilities[0]))
+                seed_probabilities[0] = seed_probabilities[0] + prob_vs[0]
+                prob_vs[1] = (prob_momentum*prob_vs[1]) + ((1-prob_momentum)*(new_probs[1]-seed_probabilities[1]))
+                seed_probabilities[1] = seed_probabilities[1] + prob_vs[1]
+                prob_vs[2] = (prob_momentum*prob_vs[2]) + ((1-prob_momentum)*(new_probs[2]-seed_probabilities[2]))
+                seed_probabilities[2] = seed_probabilities[2] + prob_vs[2]
+                prob_vs[3] = (prob_momentum*prob_vs[3]) + ((1-prob_momentum)*(new_probs[3]-seed_probabilities[3]))
+                seed_probabilities[3] = seed_probabilities[3] + prob_vs[3]
+
+                all_probs.append(new_probs)
                 all_class_labels.append(class_label_sums.cpu().detach().numpy())
                 all_normed_losses.append(normalized_class_losses)
 
@@ -404,19 +468,20 @@ def do_train(cfg, model, resume=False):
 
 
     plot_labels = ['ACTIVATE', 'INHIBIT', 'INDIRECT_ACTIVATE', 'INDIRECT_INHIBIT']
+    all_probs = np.array(all_probs)
     all_class_labels = np.array(all_class_labels)
     all_normed_losses = np.array(all_normed_losses)
-    for idx in range(all_normed_losses.shape[1]):
-        # define data values
-        x = np.arange(all_normed_losses.shape[0])  # X-axis points
-        y = all_normed_losses[:,idx]
+    # for idx in range(all_normed_losses.shape[1]):
+    #     # define data values
+    #     x = np.arange(all_normed_losses.shape[0])  # X-axis points
+    #     y = all_normed_losses[:,idx]
         
-        plt.plot(x, y, label=plot_labels[idx])  # Plot the chart
+    #     plt.plot(x, y, label=plot_labels[idx])  # Plot the chart
 
-    print(all_normed_losses)
+    # print(all_normed_losses)
 
-    plt.legend()
-    plt.show()  # display
+    # plt.legend()
+    # plt.show()  # display
 
 
     with open('active_losses.csv', 'w') as f:
@@ -438,6 +503,16 @@ def do_train(cfg, model, resume=False):
 
         # write a row to the csv file
         writer.writerows(all_class_labels)
+
+
+    with open('active_probs.csv', 'w') as f:
+        # create the csv writer
+        writer = csv.writer(f)
+
+        writer.writerow(plot_labels)
+
+        # write a row to the csv file
+        writer.writerows(all_probs)
 
 
     
